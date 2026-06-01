@@ -1,0 +1,38 @@
+﻿namespace Base.Persistence;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
+
+using Base.Core.Contracts;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+
+public static class GenericRepositoryExtensions
+{
+    public static void Sync<TEntity, TKey>(this ICollection<TEntity> inDb, ICollection<TEntity> toDb, Func<TEntity, TKey> keySelector, Action<TEntity, TEntity> copyToDb, Action<TEntity>? setAdd = null, Action<TEntity>? setDelete = null)
+    {
+        foreach (var ed in inDb.Join(toDb, keySelector, keySelector, (eDb, tDb) => (eDb, tDb)))
+        {
+            copyToDb(ed.eDb, ed.tDb);
+        }
+
+        var toAdd = toDb.ExceptBy(inDb.Select(keySelector), keySelector).ToList();
+        var toDel = inDb.ExceptBy(toDb.Select(keySelector), keySelector).ToList();
+
+        foreach (var add in toAdd)
+        {
+            inDb.Add(add);
+            setAdd?.Invoke(add);
+        }
+
+        foreach (var del in toDel)
+        {
+            setDelete?.Invoke(del);
+            inDb.Remove(del);
+        }
+    }
+}

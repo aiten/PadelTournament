@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Import": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"p:/Schule/CSharp/Beispiele.CSharp4/WebAPI/Examination/Solution/WebAPI\" -type f -name \"*Student*\" -o -name \"*Endpoints*\" -o -name \"*Controllers*\" 2>/dev/null | head -30)",
+      "Read(//p/Schule/CSharp/Beispiele.CSharp4/WebAPI/Examination/Solution/WebAPI/**)",
+      "Bash(find \"p:/Schule/CSharp/Beispiele.CSharp4/WebAPI/Examination/Solution\" -type f -name \"*DbContext*\" -o -name \"*Context.cs\")",
+      "Read(//p/Schule/CSharp/Beispiele.CSharp4/WebAPI/Examination/Solution/**)",
+      "Bash(Remove-Item -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\models\\\\quote.model.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\models\\\\quote-overview.model.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\models\\\\rating.model.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\services\\\\quote.service.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\services\\\\rating.service.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\quotes\\\\quote-list.component.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\quotes\\\\quote-form.component.ts\", \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\quotes\\\\quote-rating.component.ts\" -Force)",
+      "Bash(Get-ChildItem -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\Examination\\\\Solution\\\\AngularUI\\\\src\\\\app\" -Recurse -Include \"*.ts\", \"*.html\")",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-ChildItem -Recurse -File)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\PadelTournament\\\\Solution\\\\AngularUI\\\\src\" -Recurse -Filter \"*exam*\" -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\PadelTournament\\\\Solution\\\\AngularUI\\\\src\\\\app\" -Recurse -Name)",
+      "Bash(Get-ChildItem -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\PadelTournament\\\\Solution\\\\AngularUI\\\\src\" -Recurse -Directory)",
+      "Bash(Remove-Item \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\PadelTournament\\\\Solution\\\\AngularUI\\\\src\\\\app\\\\public\\\\public-tournament.component.ts\")",
+      "Bash(npm install *)",
+      "Bash(Get-ChildItem -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\PadelTournament\\\\Solution\\\\AngularUI\\\\src\\\\app\" -Recurse -Include \"*team*.html\", \"*tournament*.html\")",
+      "Bash(cd /p/Schule/CSharp/Beispiele.CSharp4/WebAPI/PadelTournament/Solution/AngularUI/src/app && find . -type f -name \"*team*\" -o -name \"*tournament*\" | head -30)",
+      "Read(//p/p/Schule/CSharp/Beispiele.CSharp4/WebAPI/PadelTournament/Solution/AngularUI/src/**)"
+    ]
+  }
+}

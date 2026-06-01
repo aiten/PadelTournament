@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Core.Entities.Tournament">
+    <Position X="5" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AhAACAAAAACgAAAAABAAAAAAAAAIAAQAAAAAAAAAAAA=</HashCode>
+      <FileName>Entities\Tournament.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsCollectionAssociation>
+      <Property Name="Teams" />
+      <Property Name="Matches" />
+    </ShowAsCollectionAssociation>
+  </Class>
+  <Class Name="Core.Entities.Match">
+    <Position X="11" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgAAQAAAAiQAABAAAgAAIAQAACAEAAAAAAAAAAIAAQA=</HashCode>
+      <FileName>Entities\Match.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="TeamA" />
+      <Property Name="TeamB" />
+      <Property Name="NextMatch" />
+      <Property Name="Tournament" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Core.Entities.Team">
+    <Position X="8" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CgAAAAAAAAAAAAAAAAAAAAQAAQAEAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Entities\Team.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Tournament" />
+    </ShowAsAssociation>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
