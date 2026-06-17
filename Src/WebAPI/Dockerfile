@@ -15,7 +15,8 @@ WORKDIR /src
 COPY ["Directory.Build.props", "."]
 COPY ["WebAPI/WebAPI.csproj", "WebAPI/"]
 COPY ["Persistence/Persistence.csproj", "Persistence/"]
-COPY ["Core/Core.csproj", "Core/"]
+COPY ["Service/Service.csproj", "Service/"]
+COPY ["Shared/Shared.csproj", "Shared/"]
 COPY ["Base/Base.csproj", "Base/"]
 RUN dotnet restore "./WebAPI/WebAPI.csproj"
 COPY . .
