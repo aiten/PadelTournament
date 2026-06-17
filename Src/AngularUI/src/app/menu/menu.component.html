@@ -7,6 +7,11 @@
 
     <a routerLink="/tournaments" class="action-item" *kaHasRoles="[roles.admin]">Tournaments</a>
     <a routerLink="/profile" class="action-item" *kaHasRoles="[roles.viewProfile]">Profile</a>
+    <div class="dropdown" *kaHasRoles="[roles.admin]">
+      <span class="action-item dropdown-toggle">Admin</span>
+      <div class="dropdown-menu">
+      </div>
+    </div>
 
     @if (this.keycloak.hasResourceRole(roles.viewProfile) || this.keycloak.hasRealmRole(roles.viewProfile)) {
     <a routerLink="/profile" class="action-item">My Profile</a>

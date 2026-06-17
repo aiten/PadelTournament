@@ -31,7 +31,43 @@ a.action-item {
   text-decoration: none;
 }
 
-a.action-item:hover {
+a.action-item:hover,
+span.action-item:hover {
   background: #bfbfbf;
   border-radius: 5px;
+}
+
+.dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-toggle {
+  cursor: pointer;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #e1e1e1;
+  min-width: 150px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  padding: 5px 0;
+  z-index: 100;
+  flex-direction: column;
+}
+
+.dropdown:hover .dropdown-menu {
+  display: flex;
+}
+
+.dropdown-menu .action-item {
+  display: block;
+  margin: 0;
+  padding: 8px 15px;
+  white-space: nowrap;
 }

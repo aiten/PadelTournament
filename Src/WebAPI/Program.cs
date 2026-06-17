@@ -12,6 +12,8 @@ using Keycloak.AuthServices.Authentication;
 using Keycloak.AuthServices.Authorization;
 using Keycloak.AuthServices.Common;
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -23,12 +25,41 @@ using Scalar.AspNetCore;
 
 using Persistence;
 
+using Service;
+
 using WebAPI;
 using WebAPI.Endpoints;
+using WebAPI.ExceptionHandlers;
+using WebAPI.Hubs;
+using WebAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddKeycloakWebApiAuthentication(builder.Configuration);
+
+// Allow SignalR clients to pass the bearer token via query string (?access_token=...)
+// because WebSocket connections cannot send custom headers
+builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    var originalOnMessageReceived = options.Events?.OnMessageReceived;
+    options.Events ??= new JwtBearerEvents();
+    options.Events.OnMessageReceived = async context =>
+    {
+        if (originalOnMessageReceived != null)
+            await originalOnMessageReceived(context);
+
+        if (string.IsNullOrEmpty(context.Token))
+        {
+            var accessToken = context.Request.Query["access_token"];
+            if (!string.IsNullOrEmpty(accessToken) &&
+                context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+        }
+    };
+});
+
 builder.Services.AddCors();
 
 builder.Services
@@ -109,14 +140,31 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-builder.Services.AddCors(options => { options.AddDefaultPolicy(policy => { policy.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod(); }); });
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy => policy.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+    // SignalR requires AllowCredentials; AllowAnyOrigin is incompatible with it,
+    // so SetIsOriginAllowed is used as the equivalent open policy.
+    options.AddPolicy("SignalRCors", policy =>
+        policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+});
 
+builder.Services.AddSignalR();
+
+
+//builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<IHubNotificationService, HubNotificationService>();
 
 builder.Services
-    .AddScoped<IUnitOfWork, UnitOfWork>()
-    .AddAssemblyIncludingInternals(name => name.EndsWith("Repository"), ServiceLifetime.Transient, typeof(ApplicationDbContext).Assembly);
+    .AddScoped<UnitOfWork>()
+    //.AddScoped<ITransactionProvider>(sp => sp.GetRequiredService<UnitOfWork>())
+    .AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork>())
+    .AddAssemblyIncludingInternals(name => name.EndsWith("Repository"), ServiceLifetime.Transient, typeof(ApplicationDbContext).Assembly)
+    //.AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(ExamService).Assembly);
+    ;
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -161,6 +209,7 @@ app.MapMatchEndpoints("/api/tournament");
 app.MapMatchResultEndpoints("/api/tournament");
 app.MapRegistrationEndpoints("/api/registration");
 app.MapPublicEndpoints("/api/public");
+app.MapHub<TournamentHub>("/hubs/tournament").RequireCors("SignalRCors");
 
 app.MapFallbackToFile("index.html");
 
