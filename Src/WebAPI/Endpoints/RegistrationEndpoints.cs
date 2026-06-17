@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Routing;
 
 using Persistence;
 
+using Service;
+
 using WebAPI.Filters;
 
 public record TeamRegistrationDto(string Name, int Pin);
@@ -23,7 +25,7 @@ public static class RegistrationEndpoints
             .WithTags("Registration");
         // NO Auth required .RequireAuthorization(Settings.AdminPolicyName);
 
-        route.MapPost("", async (TeamRegistrationDto dto, IUnitOfWork uow) =>
+        route.MapPost("", async (TeamRegistrationDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 try
                 {
@@ -31,6 +33,7 @@ public static class RegistrationEndpoints
                     var       registration = await uow.Tournaments.RegisterTeamByPinAsync(dto.Name, dto.Pin);
 
                     await trans.CommitTransactionAsync();
+                    await hub.NotifyTournamentTeamUpdatedAsync(registration.TournamentId);
 
                     return Results.Created($"/api/public/{dto.Pin}/{registration.RegistrationCode}",
                         new TeamRegistrationResultDto(

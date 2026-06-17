@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Routing;
 using Persistence;
 using Persistence.Model;
 
+using Service;
+
 using WebAPI.Filters;
 
 public record MatchDto(
@@ -104,7 +106,7 @@ public static class MatchEndpoints
             .Produces<MatchDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, MatchDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPost("", async (int tournamentId, MatchDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 if (dto.Id != 0)
                 {
@@ -138,6 +140,7 @@ public static class MatchEndpoints
 
                 await uow.Matches.AddAsync(entity);
                 await trans.CommitTransactionAsync();
+                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
 
                 int id = entity.Id;
                 return Results.Created(
@@ -149,7 +152,7 @@ public static class MatchEndpoints
             .Produces<MatchDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 using var trans = await uow.BeginTransactionAsync();
 
@@ -170,6 +173,7 @@ public static class MatchEndpoints
                 entity.Remark      = dto.Remark;
 
                 await trans.CommitTransactionAsync();
+                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
 
                 return Results.NoContent();
             })
@@ -179,7 +183,7 @@ public static class MatchEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}/winner", async (int tournamentId, int id, SetWinnerDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPut("/{id:int}/winner", async (int tournamentId, int id, SetWinnerDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 var match = await uow.Matches.GetByIdAsync(id);
                 if (match is null || match.TournamentId != tournamentId)
@@ -213,6 +217,8 @@ public static class MatchEndpoints
                         title: "Cannot set winner",
                         detail: ex.Message);
                 }
+
+                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
 
                 return Results.NoContent();
             })

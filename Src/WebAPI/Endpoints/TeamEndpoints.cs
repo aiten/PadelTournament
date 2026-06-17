@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Routing;
 using Persistence;
 using Persistence.Model;
 
+using Service;
+
 using WebAPI.Filters;
 
 public record TeamDto(
@@ -102,7 +104,7 @@ public static class TeamEndpoints
             .Produces<TeamDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 if (dto.Id != 0)
                 {
@@ -128,6 +130,7 @@ public static class TeamEndpoints
                 ApplySeedOrStartMatchPos(entity, dto);
 
                 await trans.CommitTransactionAsync();
+                await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
 
                 int id = entity.Id;
                 return Results.Created(
@@ -139,7 +142,7 @@ public static class TeamEndpoints
             .Produces<TeamDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 if (id != dto.Id)
                 {
@@ -164,7 +167,7 @@ public static class TeamEndpoints
                 {
                     return Results.Problem(
                         statusCode: StatusCodes.Status400BadRequest,
-                        title: "Team not found",
+                        title: "Invalid request",
                         detail: $"No team found with ID {id} in tournament {tournamentId}");
                 }
 
@@ -173,6 +176,7 @@ public static class TeamEndpoints
                 ApplySeedOrStartMatchPos(entity, dto);
 
                 await trans.CommitTransactionAsync();
+                await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
 
                 return Results.NoContent();
             })
@@ -181,7 +185,7 @@ public static class TeamEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapDelete("/{id:int}", async (int tournamentId, int id, IUnitOfWork uow) =>
+        routeAdmin.MapDelete("/{id:int}", async (int tournamentId, int id, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 var entity = await uow.Teams.GetByIdAsync(id);
                 if (entity is null || entity.TournamentId != tournamentId)
@@ -194,6 +198,7 @@ public static class TeamEndpoints
 
                 uow.Teams.Remove(entity);
                 await uow.SaveChangesAsync();
+                await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
 
                 return Results.NoContent();
             })
@@ -201,7 +206,7 @@ public static class TeamEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 var entries = dto.TeamsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Select(raw =>
@@ -221,6 +226,7 @@ public static class TeamEndpoints
                     var       teams      = await uow.Tournaments.RegisterTeamsAsync(tournamentId, entries);
                     var       tournament = await uow.Tournaments.GetByIdAsync(tournamentId);
                     await trans.CommitTransactionAsync();
+                    await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
 
                     return Results.Ok(teams
                         .Select(t => new TeamRegistrationResultDto(t.Name, tournament?.RegistrationPin ?? 0, t.RegistrationCode!))

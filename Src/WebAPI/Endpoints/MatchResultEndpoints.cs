@@ -12,6 +12,8 @@ using Persistence;
 using Persistence.Model;
 using Persistence.QueryResult;
 
+using Service;
+
 public record MatchResultDto(
     int                Id,
     string?            Result,
@@ -122,7 +124,7 @@ public static class MatchResultEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeAdmin.MapPut("", async (int tournamentId, int matchId, MatchResultDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPut("", async (int tournamentId, int matchId, MatchResultDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 var match = await uow.Matches.GetByIdAsync(matchId);
 
@@ -139,6 +141,7 @@ public static class MatchResultEndpoints
                 var result = ToEntity(dto);
                 await uow.Matches.UpdateMatchResultAsync(matchId, result!);
                 await trans.CommitTransactionAsync();
+                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
 
                 return Results.NoContent();
             })
@@ -146,7 +149,7 @@ public static class MatchResultEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapDelete("", async (int tournamentId, int matchId, IUnitOfWork uow) =>
+        routeAdmin.MapDelete("", async (int tournamentId, int matchId, IUnitOfWork uow, IHubNotificationService hub) =>
             {
                 var match = await uow.Matches.GetByIdAsync(matchId, nameof(Match.Sets));
 
@@ -161,6 +164,7 @@ public static class MatchResultEndpoints
                 using var trans = await uow.BeginTransactionAsync();
                 match.Sets.Clear();
                 await trans.CommitTransactionAsync();
+                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
 
                 return Results.NoContent();
             })

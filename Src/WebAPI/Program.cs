@@ -209,6 +209,7 @@ app.MapMatchResultEndpoints("/api/tournament");
 app.MapRegistrationEndpoints("/api/registration");
 app.MapPublicEndpoints("/api/public");
 app.MapHub<TournamentHub>("/hubs/tournament").RequireCors("SignalRCors");
+app.MapHub<PublicHub>("/hubs/public").RequireCors("SignalRCors").AllowAnonymous();
 
 app.MapFallbackToFile("index.html");
 
