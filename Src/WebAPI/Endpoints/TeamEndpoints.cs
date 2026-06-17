@@ -130,7 +130,8 @@ public static class TeamEndpoints
                 ApplySeedOrStartMatchPos(entity, dto);
 
                 await trans.CommitTransactionAsync();
-                await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentTeamUpdatedAsync(pin);
 
                 int id = entity.Id;
                 return Results.Created(
@@ -176,7 +177,8 @@ public static class TeamEndpoints
                 ApplySeedOrStartMatchPos(entity, dto);
 
                 await trans.CommitTransactionAsync();
-                await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentTeamUpdatedAsync(pin);
 
                 return Results.NoContent();
             })
@@ -198,7 +200,8 @@ public static class TeamEndpoints
 
                 uow.Teams.Remove(entity);
                 await uow.SaveChangesAsync();
-                await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentTeamUpdatedAsync(pin);
 
                 return Results.NoContent();
             })
@@ -226,7 +229,7 @@ public static class TeamEndpoints
                     var       teams      = await uow.Tournaments.RegisterTeamsAsync(tournamentId, entries);
                     var       tournament = await uow.Tournaments.GetByIdAsync(tournamentId);
                     await trans.CommitTransactionAsync();
-                    await hub.NotifyTournamentTeamUpdatedAsync(tournamentId);
+                    await hub.NotifyTournamentTeamUpdatedAsync(tournament?.RegistrationPin ?? 0);
 
                     return Results.Ok(teams
                         .Select(t => new TeamRegistrationResultDto(t.Name, tournament?.RegistrationPin ?? 0, t.RegistrationCode!))

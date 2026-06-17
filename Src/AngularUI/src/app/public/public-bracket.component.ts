@@ -1,9 +1,11 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { GlobalStateService } from '../services/global-state.service';
 import { Match } from '../models/match.model';
 import { Team } from '../models/team.model';
 import { PublicService } from '../services/public.service';
+import { PublicSignalRService } from '../services/signalr.service';
 
 const CARD_W = 220;
 const CARD_H = 76;
@@ -93,19 +95,21 @@ function cardTop(ri: number, ni: number): number {
     </div>
   `
 })
-export class PublicBracketComponent implements OnInit {
+export class PublicBracketComponent implements OnInit, OnDestroy {
   matches = signal<Match[]>([]);
   teams   = signal<Team[]>([]);
   loading = signal(true);
   error   = signal('');
 
   private pin = 0;
+  private signalRSub?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private publicService: PublicService,
-    private globalState: GlobalStateService
+    private globalState: GlobalStateService,
+    private signalR: PublicSignalRService
   ) {}
 
   goBack(): void {
@@ -123,6 +127,22 @@ export class PublicBracketComponent implements OnInit {
       next: teams => this.teams.set(teams),
       error: () => {}
     });
+    this.loadMatches();
+
+    this.signalR.joinTournamentGroup(this.pin);
+    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(msg => {
+      if (msg.pin === this.pin) {
+        this.loadMatches();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.signalR.leaveTournamentGroup(this.pin);
+    this.signalRSub?.unsubscribe();
+  }
+
+  private loadMatches(): void {
     this.publicService.getMatches(this.pin).subscribe({
       next: matches => { this.matches.set(matches); this.loading.set(false); },
       error: err    => { this.error.set(err.error?.detail ?? 'Tournament not found.'); this.loading.set(false); }

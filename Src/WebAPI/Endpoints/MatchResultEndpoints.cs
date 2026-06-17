@@ -141,7 +141,8 @@ public static class MatchResultEndpoints
                 var result = ToEntity(dto);
                 await uow.Matches.UpdateMatchResultAsync(matchId, result!);
                 await trans.CommitTransactionAsync();
-                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 return Results.NoContent();
             })
@@ -164,7 +165,8 @@ public static class MatchResultEndpoints
                 using var trans = await uow.BeginTransactionAsync();
                 match.Sets.Clear();
                 await trans.CommitTransactionAsync();
-                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 return Results.NoContent();
             })

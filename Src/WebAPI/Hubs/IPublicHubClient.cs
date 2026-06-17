@@ -4,6 +4,6 @@ using System.Threading.Tasks;
 
 public interface IPublicHubClient
 {
-    Task TournamentMatchUpdated(int tournamentId);
-    Task TournamentTeamUpdated(int tournamentId);
+    Task TournamentMatchUpdated(int pin);
+    Task TournamentTeamUpdated(int pin);
 }

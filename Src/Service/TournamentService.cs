@@ -140,7 +140,7 @@ public class TournamentService : ITournamentService
         await _uow.SaveChangesAsync();
 
         await _hub.NotifyTournamentUpdatedAsync(tournament.Id);
-        await _hub.NotifyTournamentMatchUpdatedAsync(tournament.Id);
+        await _hub.NotifyTournamentMatchUpdatedAsync(tournament.RegistrationPin??1);
 
         return tournament;
     }

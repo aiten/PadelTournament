@@ -140,7 +140,8 @@ public static class MatchEndpoints
 
                 await uow.Matches.AddAsync(entity);
                 await trans.CommitTransactionAsync();
-                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 int id = entity.Id;
                 return Results.Created(
@@ -173,7 +174,8 @@ public static class MatchEndpoints
                 entity.Remark      = dto.Remark;
 
                 await trans.CommitTransactionAsync();
-                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 return Results.NoContent();
             })
@@ -218,7 +220,8 @@ public static class MatchEndpoints
                         detail: ex.Message);
                 }
 
-                await hub.NotifyTournamentMatchUpdatedAsync(tournamentId);
+                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
+                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 return Results.NoContent();
             })

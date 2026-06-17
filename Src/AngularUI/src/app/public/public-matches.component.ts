@@ -1,7 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { PublicService } from '../services/public.service';
+import { PublicSignalRService } from '../services/signalr.service';
 import { Team } from '../models/team.model';
 import { Match } from '../models/match.model';
 import { Tournament } from '../models/tournament.model';
@@ -102,7 +103,7 @@ import { Tournament } from '../models/tournament.model';
     </div>
   `
 })
-export class PublicMatchesComponent implements OnInit {
+export class PublicMatchesComponent implements OnInit, OnDestroy {
   team        = signal<Team | null>(null);
   tournament  = signal<Tournament | null>(null);
   matches     = signal<Match[]>([]);
@@ -113,14 +114,31 @@ export class PublicMatchesComponent implements OnInit {
 
   pin       = 0;
   code      = '';
-  private teamNames = new Map<number, string>();
+  private teamNames   = new Map<number, string>();
+  private signalRSub?: Subscription;
 
-  constructor(private route: ActivatedRoute, private publicService: PublicService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private publicService: PublicService,
+    private signalR: PublicSignalRService
+  ) {}
 
   ngOnInit(): void {
     this.pin  = +this.route.snapshot.paramMap.get('pin')!;
     this.code = this.route.snapshot.paramMap.get('code')!;
     this.load();
+
+    this.signalR.joinTournamentGroup(this.pin);
+    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(msg => {
+      if (msg.pin === this.pin) {
+        this.reloadMatches();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.signalR.leaveTournamentGroup(this.pin);
+    this.signalRSub?.unsubscribe();
   }
 
   private load(): void {

@@ -17,23 +17,23 @@ export class PublicSignalRService implements OnDestroy {
       .withAutomaticReconnect()
       .build();
 
-    this.connection.on('TournamentMatchUpdated', (tournamentId: number) =>
-      this.tournamentMatchUpdated$.next({ tournamentId }),
+    this.connection.on('TournamentMatchUpdated', (pin: number) =>
+      this.tournamentMatchUpdated$.next({ pin }),
     );
 
-    this.connection.on('TournamentTeamUpdated', (tournamentId: number) =>
-      this.tournamentTeamUpdated$.next({ tournamentId }),
+    this.connection.on('TournamentTeamUpdated', (pin: number) =>
+      this.tournamentTeamUpdated$.next({ pin }),
     );
 
     this.ready = this.connection.start();
   }
 
-  joinTournamentGroup(tournamentId: number): Promise<void> {
-    return this.ready.then(() => this.connection.invoke('JoinTournamentGroup', tournamentId));
+  joinTournamentGroup(pin: number): Promise<void> {
+    return this.ready.then(() => this.connection.invoke('JoinTournamentGroup', pin));
   }
 
-  leaveTournamentGroup(tournamentId: number): Promise<void> {
-    return this.ready.then(() => this.connection.invoke('LeaveTournamentGroup', tournamentId));
+  leaveTournamentGroup(pin: number): Promise<void> {
+    return this.ready.then(() => this.connection.invoke('LeaveTournamentGroup', pin));
   }
 
   ngOnDestroy(): void {

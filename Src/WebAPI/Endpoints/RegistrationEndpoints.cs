@@ -33,7 +33,7 @@ public static class RegistrationEndpoints
                     var       registration = await uow.Tournaments.RegisterTeamByPinAsync(dto.Name, dto.Pin);
 
                     await trans.CommitTransactionAsync();
-                    await hub.NotifyTournamentTeamUpdatedAsync(registration.TournamentId);
+                    await hub.NotifyTournamentTeamUpdatedAsync(dto.Pin);
 
                     return Results.Created($"/api/public/{dto.Pin}/{registration.RegistrationCode}",
                         new TeamRegistrationResultDto(
