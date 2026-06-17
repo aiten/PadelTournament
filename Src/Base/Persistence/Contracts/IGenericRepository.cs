@@ -1,4 +1,4 @@
-﻿namespace Base.Core.Contracts;
+﻿namespace Base.Persistence.Contracts;
 
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,9 @@ public interface IGenericRepository<TEntity> where TEntity : class, IEntityObjec
 
     Task<bool> ExistsAsync(int id);
 
-    void Remove(TEntity entity);
+    void Remove(TEntity                  entity);
+
+    void RemoveRange(IEnumerable<TEntity> entity);
 
     EntityEntry<TEntity> Attach(TEntity entity);
 

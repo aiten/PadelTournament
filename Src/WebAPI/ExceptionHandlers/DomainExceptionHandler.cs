@@ -18,10 +18,11 @@ public class DomainExceptionHandler : IExceptionHandler
     {
         var (status, title) = exception switch
         {
-            NotFoundException e      => (StatusCodes.Status404NotFound, e.Message),
-            BusinessRuleException e  => (StatusCodes.Status422UnprocessableEntity, e.Message),
-            IllegalValuesException e => (StatusCodes.Status400BadRequest, e.Message),
-            _                        => (0, null)
+            NotFoundException e              => (StatusCodes.Status404NotFound, e.Message),
+            BusinessRuleException e          => (StatusCodes.Status422UnprocessableEntity, e.Message),
+            IllegalValuesException e         => (StatusCodes.Status400BadRequest, e.Message),
+            InvalidTournamentDataException e => (StatusCodes.Status422UnprocessableEntity, e.Message),
+            _                                => (0, null)
         };
 
         if (status == 0)

@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Persistence.Configurations;
 
 using Base.Persistence;
-using Core.Entities;
+
+using Persistence.Model;
 
 public class TournamentConfiguration : IEntityTypeConfiguration<Tournament>
 {

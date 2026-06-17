@@ -1,4 +1,4 @@
-﻿namespace Base.Core.Contracts;
+﻿namespace Base.Persistence.Contracts;
 
 /// <summary>
 /// Jede Entität muss eine Id und ein Concurrency-Feld haben

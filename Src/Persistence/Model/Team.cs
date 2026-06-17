@@ -1,8 +1,8 @@
-namespace Core.Entities;
+namespace Persistence.Model;
 
 using System;
 
-using Base.Core.Entities;
+using Base.Persistence.Model;
 
 public class Team : EntityObject
 {

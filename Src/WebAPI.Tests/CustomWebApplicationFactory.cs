@@ -1,5 +1,3 @@
-using Base.Core.Contracts;
-using Core.Contracts;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
@@ -11,6 +9,10 @@ using NSubstitute;
 using WebAPI;
 
 namespace WebAPI.Tests;
+
+using Base.Persistence.Contracts;
+
+using Persistence;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {

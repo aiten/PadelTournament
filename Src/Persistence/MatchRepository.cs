@@ -1,17 +1,34 @@
 namespace Persistence;
 
+using Base.Persistence;
+using Base.Persistence.Contracts;
+
+using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Base.Persistence;
+using Persistence.Model;
+using Persistence.QueryResult;
 
-using Core.Contracts;
-using Core.Entities;
-using Core.QueryResult;
+public interface IMatchRepository : IGenericRepository<Match>
+{
+    Task<bool> AnyTournamentAsync(int tournamentId);
 
-using Microsoft.EntityFrameworkCore;
+    Task<IList<Match>> GetByTournamentAsync(int tournamentId);
+
+    Task<IList<Match>> GetByTeamAsync(int teamId);
+
+    Task SetWinnerAsync(int matchId, MatchResult winner);
+
+    Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result);
+
+    Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
+
+    Task UpdateMatchResultAsync(int matchId, MatchResultOverview result);
+}
 
 public class MatchRepository : GenericRepository<Match>, IMatchRepository
 {
@@ -20,6 +37,11 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
     public MatchRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _dbContext = dbContext;
+    }
+
+    public async Task<bool> AnyTournamentAsync(int tournamentId)
+    {
+        return await DbSet.AnyAsync(m => m.TournamentId == tournamentId);
     }
 
     public async Task<IList<Match>> GetByTournamentAsync(int tournamentId)

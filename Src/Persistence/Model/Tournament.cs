@@ -1,12 +1,12 @@
-using Core.Validations;
-
-namespace Core.Entities;
+namespace Persistence.Model;
 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-using Base.Core.Entities;
+using Base.Persistence.Model;
+
+using Persistence.Validations;
 
 public class Tournament : EntityObject
 {

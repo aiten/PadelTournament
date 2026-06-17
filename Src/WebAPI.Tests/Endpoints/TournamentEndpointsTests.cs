@@ -3,9 +3,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 
-using Core.Entities;
-using Core.QueryResult;
-
 using FluentAssertions;
 
 using NSubstitute;
@@ -14,6 +11,9 @@ using WebAPI;
 using WebAPI.Endpoints;
 
 namespace WebAPI.Tests.Endpoints;
+
+using Persistence.Model;
+using Persistence.QueryResult;
 
 public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {

@@ -2,8 +2,6 @@ using System;
 using System.Net;
 using System.Net.Http.Json;
 
-using Core.Entities;
-
 using FluentAssertions;
 
 using NSubstitute;
@@ -12,6 +10,8 @@ using WebAPI;
 using WebAPI.Endpoints;
 
 namespace WebAPI.Tests.Endpoints;
+
+using Persistence.Model;
 
 public class MatchEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {

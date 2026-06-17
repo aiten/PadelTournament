@@ -4,13 +4,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Core.Contracts;
-using Core.Entities;
-using Core.QueryResult;
+using Base.Persistence.Contracts;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+
+using Persistence;
+using Persistence.Model;
+using Persistence.QueryResult;
+
+using Service;
+
+using Shared.Exceptions;
 
 using WebAPI.Filters;
 
@@ -66,7 +72,6 @@ public static class TournamentEndpoints
 
     #endregion
 
-
     public static void MapTournamentEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
         var route = app
@@ -81,18 +86,18 @@ public static class TournamentEndpoints
             .WithTags("Tournament")
             .RequireAuthorization(Settings.AdminPolicyName);
 
-        route.MapGet("", async (IUnitOfWork uow) =>
+        route.MapGet("", async (ITournamentService service) =>
             {
-                var dtos = await uow.Tournaments.GetTournamentOverviewsAsync();
+                var dtos = await service.GetTournamentOverviewsAsync();
                 return Results.Ok(dtos);
             })
             .WithName("GetTournaments")
             .Produces<List<TournamentOverview>>(StatusCodes.Status200OK);
 
 
-        route.MapGet("/{id:int}", async (int id, IUnitOfWork uow) =>
+        route.MapGet("/{id:int}", async (int id, ITournamentService service) =>
             {
-                var dto = ToDto(await uow.Tournaments.GetByIdAsync(id));
+                var dto = ToDto(await service.GetByIdAsync(id));
 
                 if (dto is null)
                 {
@@ -108,34 +113,16 @@ public static class TournamentEndpoints
             .Produces<TournamentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPut("/{id:int}", async (int id, TournamentDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPut("/{id:int}", async (int id, TournamentDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 if (id != dto.Id)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The ID in the URL does not match the ID in the request body");
+                    throw new IllegalValuesException("The ID in the URL does not match the ID in the request body");
                 }
 
-                using (var trans = await uow.BeginTransactionAsync())
+                using (var trans = await transactionProvider.BeginTransactionAsync())
                 {
-                    var entity = await uow.Tournaments.GetByIdAsync(id);
-
-                    if (entity is null)
-                    {
-                        return Results.Problem(
-                            statusCode: StatusCodes.Status400BadRequest,
-                            title: "Tournament not found",
-                            detail: $"No Tournament found with ID {id}");
-                    }
-
-                    entity.Description     = dto.Description;
-                    entity.RegistrationPin = dto.RegistrationPin;
-                    entity.From            = dto.From;
-                    entity.To              = dto.To;
-                    entity.Modified        = DateTime.Now;
-
+                    await service.UpdateTournamentAsync(id, ToEntity(dto));
                     await trans.CommitTransactionAsync();
                 }
 
@@ -148,29 +135,21 @@ public static class TournamentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeAdmin.MapPost("", async (TournamentDto dto, IUnitOfWork uow) =>
+        routeAdmin.MapPost("", async (TournamentDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 if (dto.Id != 0)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The ID in the request body must be 0");
+                    throw new IllegalValuesException("The ID in the request body must be 0");
                 }
 
-                using (var trans = await uow.BeginTransactionAsync())
+                using (var trans = await transactionProvider.BeginTransactionAsync())
                 {
-                    var entity = ToEntity(dto);
-
-                    entity.Created = DateTime.Now;
-
-                    await uow.Tournaments.AddAsync(entity);
+                    var entity  = ToEntity(dto);
+                    var created = await service.AddTournamentAsync(entity);
 
                     await trans.CommitTransactionAsync();
 
-                    int id = entity.Id;
-
-                    return Results.Created($"{baseRoute}/{id}", ToDto(await uow.Tournaments.GetByIdAsync(id)));
+                    return Results.Created($"{baseRoute}/{created.Id}", ToDto(created));
                 }
             })
             .WithValidation<TournamentDto>()
@@ -178,21 +157,12 @@ public static class TournamentEndpoints
             .Produces(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapDelete("/{id:int}", async (int id, IUnitOfWork uow) =>
+        routeAdmin.MapDelete("/{id:int}", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
-                using var trans = await uow.BeginTransactionAsync();
-
-                try
+                using (var trans = await transactionProvider.BeginTransactionAsync())
                 {
-                    await uow.Tournaments.DeleteCascadeAsync(id);
+                    await service.DeleteTournamentAsync(id);
                     await trans.CommitTransactionAsync();
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Cannot delete tournament",
-                        detail: ex.Message);
                 }
 
                 return Results.NoContent();
@@ -202,47 +172,27 @@ public static class TournamentEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status204NoContent);
 
-        routeAdmin.MapPost("/{id:int}/generate-schedule", async (int id, IUnitOfWork uow) =>
+        routeAdmin.MapPost("/{id:int}/generate-schedule", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                Tournament tournament;
-                try
-                {
-                    tournament = await uow.Tournaments.GenerateMatchSchedule(id);
-                    await trans.CommitTransactionAsync();
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Cannot generate bracket",
-                        detail: ex.Message);
-                }
+                var tournament = await service.GenerateMatchScheduleAsync(id);
+                await trans.CommitTransactionAsync();
 
                 return Results.Ok(tournament.Matches.Select(MatchEndpoints.ToDto).ToList());
             })
             .WithName("GenerateBracket")
             .Produces<List<MatchDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapDelete("/{id:int}/revert-schedule", async (int id, IUnitOfWork uow) =>
+        routeAdmin.MapDelete("/{id:int}/revert-schedule", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                try
-                {
-                    await uow.Tournaments.DeleteMatchScheduleAsync(id);
-                    await trans.CommitTransactionAsync();
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Cannot revert schedule",
-                        detail: ex.Message);
-                }
+                await service.DeleteMatchScheduleAsync(id);
+                await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })

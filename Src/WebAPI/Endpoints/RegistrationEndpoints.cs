@@ -2,11 +2,11 @@ namespace WebAPI.Endpoints;
 
 using System;
 
-using Core.Contracts;
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+
+using Persistence;
 
 using WebAPI.Filters;
 

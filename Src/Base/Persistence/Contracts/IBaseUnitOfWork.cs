@@ -1,12 +1,11 @@
-﻿namespace Base.Core.Contracts;
+﻿namespace Base.Persistence.Contracts;
 
 using System;
 using System.Threading.Tasks;
 
-public interface IBaseUnitOfWork : IDisposable, IAsyncDisposable
+public interface IBaseUnitOfWork : ITransactionProvider, IDisposable, IAsyncDisposable
 {
-    ITransaction       BeginTransaction();
-    Task<ITransaction> BeginTransactionAsync();
+    ITransaction BeginTransaction();
 
     Task<int> SaveChangesAsync();
     Task      DeleteDatabaseAsync();

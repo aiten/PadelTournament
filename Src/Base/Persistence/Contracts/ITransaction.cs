@@ -1,4 +1,4 @@
-﻿namespace Base.Core.Contracts;
+﻿namespace Base.Persistence.Contracts;
 
 using System;
 using System.Threading.Tasks;

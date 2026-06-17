@@ -1,8 +1,8 @@
-﻿using Core.Entities;
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace Persistence;
+
+using Persistence.Model;
 
 public class ApplicationDbContext : DbContext
 {

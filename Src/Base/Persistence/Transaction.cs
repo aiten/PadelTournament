@@ -3,7 +3,7 @@
 using System;
 using System.Threading.Tasks;
 
-using Base.Core.Contracts;
+using Base.Persistence.Contracts;
 
 using Microsoft.EntityFrameworkCore.Storage;
 

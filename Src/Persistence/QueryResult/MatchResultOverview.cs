@@ -1,9 +1,8 @@
-namespace Core.QueryResult;
+namespace Persistence.QueryResult;
 
-using System;
 using System.Collections.Generic;
 
-using Core.Entities;
+using Persistence.Model;
 
 public record GameResultOverview(
     int     No,

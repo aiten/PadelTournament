@@ -4,13 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Core.Contracts;
-using Core.Entities;
-using Core.QueryResult;
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+
+using Persistence;
+using Persistence.Model;
+using Persistence.QueryResult;
 
 public record MatchResultDto(
     int                Id,

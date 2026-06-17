@@ -6,7 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-using Base.Core.Contracts;
+using Base.Persistence.Contracts;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -101,6 +101,11 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEnt
     public void Remove(TEntity entity)
     {
         _dbSet.Remove(entity);
+    }
+
+    public void RemoveRange(IEnumerable<TEntity> entities)
+    {
+        _dbSet.RemoveRange(entities);
     }
 
     public EntityEntry<TEntity> Attach(TEntity entity)

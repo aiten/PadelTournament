@@ -1,10 +1,9 @@
-using Core.Entities;
-
-using System.ComponentModel.DataAnnotations;
-
-namespace Core.Validations;
+namespace Persistence.Validations;
 
 using System;
+using System.ComponentModel.DataAnnotations;
+
+using Persistence.Model;
 
 public class TournamentRange : ValidationAttribute
 {

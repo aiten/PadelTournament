@@ -1,4 +1,4 @@
-﻿namespace Base.Core;
+﻿namespace Base.Tools;
 
 using System;
 using System.Linq;

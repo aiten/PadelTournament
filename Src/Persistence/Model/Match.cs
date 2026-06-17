@@ -1,9 +1,9 @@
-namespace Core.Entities;
+namespace Persistence.Model;
 
 using System;
 using System.Collections.Generic;
 
-using Base.Core.Entities;
+using Base.Persistence.Model;
 
 public class Match : EntityObject
 {

@@ -1,4 +1,4 @@
-﻿namespace Core.Entities;
+﻿namespace Persistence.Model;
 
 public enum MatchResult
 {

@@ -1,9 +1,4 @@
-﻿using Base.Core;
-
-using Core.Contracts;
-using Core.Entities;
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,6 +8,10 @@ using Persistence;
 using System;
 using System.IO;
 using System.Linq;
+
+using Base.Tools;
+
+using Persistence.Model;
 
 var builder = Host.CreateApplicationBuilder(args);
 

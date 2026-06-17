@@ -1,8 +1,14 @@
-﻿using Core.Contracts;
-
-namespace Persistence;
+﻿namespace Persistence;
 
 using Base.Persistence;
+using Base.Persistence.Contracts;
+
+public interface IUnitOfWork : IBaseUnitOfWork
+{
+    ITournamentRepository Tournaments { get; }
+    ITeamRepository       Teams       { get; }
+    IMatchRepository      Matches     { get; }
+}
 
 public class UnitOfWork : BaseUnitOfWork, IUnitOfWork
 {

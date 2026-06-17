@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Base.Core;
-
-using Core.Contracts;
+using Base.Persistence.Contracts;
+using Base.Tools;
 
 using FluentValidation;
 
@@ -160,10 +159,10 @@ builder.Services.AddSingleton<IHubNotificationService, HubNotificationService>()
 
 builder.Services
     .AddScoped<UnitOfWork>()
-    //.AddScoped<ITransactionProvider>(sp => sp.GetRequiredService<UnitOfWork>())
+    .AddScoped<ITransactionProvider>(sp => sp.GetRequiredService<UnitOfWork>())
     .AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork>())
     .AddAssemblyIncludingInternals(name => name.EndsWith("Repository"), ServiceLifetime.Transient, typeof(ApplicationDbContext).Assembly)
-    //.AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(ExamService).Assembly);
+    .AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(TournamentService).Assembly);
     ;
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");

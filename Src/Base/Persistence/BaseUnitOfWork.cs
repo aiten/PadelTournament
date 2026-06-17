@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Base.Core.Contracts;
+using Base.Persistence.Contracts;
 
 using Microsoft.EntityFrameworkCore;
 

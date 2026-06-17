@@ -4,12 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Core.Contracts;
-using Core.Entities;
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+
+using Persistence;
+using Persistence.Model;
 
 public record PublicMatchResultDto(bool Won);
 

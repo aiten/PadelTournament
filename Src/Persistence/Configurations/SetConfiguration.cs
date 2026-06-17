@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Persistence.Configurations;
 
-using Core.Entities;
+using Persistence.Model;
 
 public class SetConfiguration : IEntityTypeConfiguration<Set>
 {

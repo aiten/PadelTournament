@@ -5,11 +5,17 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Base.Persistence;
-
-using Core.Contracts;
-using Core.Entities;
+using Base.Persistence.Contracts;
 
 using Microsoft.EntityFrameworkCore;
+
+using Persistence.Model;
+
+public interface ITeamRepository : IGenericRepository<Team>
+{
+    Task<IList<Team>> GetByTournamentAsync(int   tournamentId);
+    Task<Team?>       GetByRegistrationAsync(int pin, string registrationCode);
+}
 
 public class TeamRepository : GenericRepository<Team>, ITeamRepository
 {
