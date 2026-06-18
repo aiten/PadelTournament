@@ -1,6 +1,5 @@
 ﻿namespace Service;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Persistence;
@@ -12,7 +11,6 @@ using Shared.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 
 public interface ITournamentService

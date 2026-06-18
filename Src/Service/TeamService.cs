@@ -1,18 +1,12 @@
 ﻿namespace Service;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Persistence;
 using Persistence.Model;
-using Persistence.QueryResult;
 
 using Shared.Exceptions;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 
 public interface ITeamService
