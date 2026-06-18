@@ -21,7 +21,7 @@ public interface IMatchRepository : IGenericRepository<Match>
 
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
-    Task UpdateMatchResultAsync(int matchId, MatchResultOverview result);
+    Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result);
 }
 
 public class MatchRepository : GenericRepository<Match>, IMatchRepository
@@ -81,9 +81,9 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
             .SingleOrDefaultAsync();
     }
 
-    public async Task UpdateMatchResultAsync(int matchId, MatchResultOverview result)
+    public async Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result)
     {
-        var match = await GetByIdAsync(matchId, nameof(Match.Sets), $"{nameof(Match.Sets)}.{nameof(Set.Games)}");
+        var match = await GetByIdAsync(matchId, nameof(Match.Sets), $"{nameof(Match.Sets)}.{nameof(Set.Games)}", nameof(Match.Tournament));
 
         if (match is null)
         {
@@ -116,5 +116,7 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
                 gDb.Server = gDto.Server;
             });
         });
+
+        return match;
     }
 }

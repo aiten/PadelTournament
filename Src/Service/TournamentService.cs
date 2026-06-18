@@ -334,6 +334,9 @@ public class TournamentService : ITournamentService
     {
         var entity = await SingleTournamentAsync(tournamentId, nameof(Tournament.Matches));
         _uow.Matches.RemoveRange(entity.Matches);
+
+        await _uow.SaveChangesAsync();
+        await _hub.NotifyTournamentMatchUpdatedAsync(entity.RegistrationPin ?? 1);
     }
 
     #endregion

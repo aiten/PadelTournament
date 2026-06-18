@@ -1,10 +1,13 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal, computed } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Match } from '../models/match.model';
 import { Team } from '../models/team.model';
 import { MatchService } from '../services/match.service';
 import { TeamService } from '../services/team.service';
+import { PublicSignalRService } from '../services/signalr.service';
 import { TournamentService } from '../services/tournament.service';
+import { Tournament } from '../models/tournament.model';
 
 type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
 
@@ -85,13 +88,15 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
     </div>
   `
 })
-export class MatchListComponent implements OnInit {
+export class MatchListComponent implements OnInit, OnDestroy {
   tournamentId = 0;
+  tournamentPin = 0;
   matches = signal<Match[]>([]);
   teams = signal<Team[]>([]);
   loading = signal(false);
   sortCol = signal<SortCol>('round');
   sortAsc = signal(true);
+  private signalRSub?: Subscription;
 
   sortedMatches = computed(() => {
     const col = this.sortCol();
@@ -117,15 +122,39 @@ export class MatchListComponent implements OnInit {
     private teamService: TeamService,
     private tournamentService: TournamentService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private signalR: PublicSignalRService
   ) {}
 
   ngOnInit(): void {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
-    this.loading.set(true);
+    this.tournamentService.getById(this.tournamentId).subscribe({
+      next: tournament => {
+        this.tournamentPin = tournament.registrationPin ?? 0;
+        this.signalR.joinTournamentGroup(this.tournamentPin);
+      }
+    });
     this.teamService.getAll(this.tournamentId).subscribe({
       next: teams => this.teams.set(teams)
     });
+    this.loadMatches();
+
+    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(({ pin }) => {
+      if (pin === this.tournamentPin) {
+        this.loadMatches();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.tournamentPin) {
+      this.signalR.leaveTournamentGroup(this.tournamentPin);
+    }
+    this.signalRSub?.unsubscribe();
+  }
+
+  private loadMatches(): void {
+    this.loading.set(true);
     this.matchService.getAll(this.tournamentId).subscribe({
       next: data => { this.matches.set(data); this.loading.set(false); },
       error: () => { this.loading.set(false); }
@@ -161,7 +190,7 @@ export class MatchListComponent implements OnInit {
 
   setWinner(m: Match, winner: 'WonA' | 'WonB'): void {
     this.matchService.setWinner(this.tournamentId, m.id, winner).subscribe({
-      next: () => this.matchService.getAll(this.tournamentId).subscribe(data => this.matches.set(data)),
+      next: () => this.loadMatches(),
       error: err => alert(err.error?.detail ?? 'Set winner failed.')
     });
   }

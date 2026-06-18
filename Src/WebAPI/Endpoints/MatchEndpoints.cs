@@ -101,37 +101,6 @@ public static class MatchEndpoints
             .Produces<MatchDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, MatchDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
-            {
-                EndpointTools.CheckIdMustBe0(dto.Id);
-                EndpointTools.CheckTournamentId(tournamentId, dto.TournamentId);
-
-                using var trans = await transactionProvider.BeginTransactionAsync();
-
-                var entity = new Match
-                {
-                    TournamentId = tournamentId,
-                    Round        = dto.Round,
-                    No           = dto.No,
-                    TeamAId      = dto.TeamAId,
-                    TeamBId      = dto.TeamBId,
-                    Start        = dto.Start,
-                    NextMatchId  = dto.NextMatchId,
-                    Remark       = dto.Remark
-                };
-
-                await matchService.AddMatchAsync(entity);
-
-                int id = entity.Id;
-                return Results.Created(
-                    $"{baseRoute}/{tournamentId}/matches/{id}",
-                    ToDto(await matchService.GetMatchByIdAsync(id)));
-            })
-            .WithValidation<MatchDto>()
-            .WithName("AddMatch")
-            .Produces<MatchDto>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
-
         routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
                 using var trans = await transactionProvider.BeginTransactionAsync();

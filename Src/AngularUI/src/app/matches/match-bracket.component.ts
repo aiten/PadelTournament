@@ -1,9 +1,13 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal, computed } from '@angular/core';
 import { RouterModule, ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Match } from '../models/match.model';
 import { Team } from '../models/team.model';
+import { Tournament } from '../models/tournament.model';
 import { MatchService } from '../services/match.service';
 import { TeamService } from '../services/team.service';
+import { PublicSignalRService } from '../services/signalr.service';
+import { TournamentService } from '../services/tournament.service';
 
 const CARD_W = 220;
 const CARD_H = 76;
@@ -114,22 +118,45 @@ function cardTop(ri: number, ni: number): number {
     </div>
   `
 })
-export class MatchBracketComponent implements OnInit {
+export class MatchBracketComponent implements OnInit, OnDestroy {
   tournamentId = 0;
+  tournamentPin = 0;
   matches = signal<Match[]>([]);
   teams   = signal<Team[]>([]);
   loading = signal(true);
+  private signalRSub?: Subscription;
 
   constructor(
     private matchService: MatchService,
     private teamService: TeamService,
-    private route: ActivatedRoute
+    private tournamentService: TournamentService,
+    private route: ActivatedRoute,
+    private signalR: PublicSignalRService
   ) {}
 
   ngOnInit(): void {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
+    this.tournamentService.getById(this.tournamentId).subscribe({
+      next: tournament => {
+        this.tournamentPin = tournament.registrationPin ?? 0;
+        this.signalR.joinTournamentGroup(this.tournamentPin);
+      }
+    });
     this.teamService.getAll(this.tournamentId).subscribe(t => this.teams.set(t));
     this.loadMatches();
+
+    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(({ pin }) => {
+      if (pin === this.tournamentPin) {
+        this.loadMatches();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.tournamentPin) {
+      this.signalR.leaveTournamentGroup(this.tournamentPin);
+    }
+    this.signalRSub?.unsubscribe();
   }
 
   private loadMatches(): void {

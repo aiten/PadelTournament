@@ -8,7 +8,6 @@ using Persistence.QueryResult;
 
 using Shared.Exceptions;
 
-using System;
 using System.Threading.Tasks;
 
 public interface IMatchService
@@ -17,8 +16,6 @@ public interface IMatchService
     Task<Match>  SingleMatchAsync(int  id, params string[] includeProperties);
 
     Task<Match> SingleMatchForTeamAsync(int matchId, int teamId, params string[] includeProperties);
-
-    Task<Match> AddMatchAsync(Match match);
 
     Task UpdateMatchResultAsync(int matchId, MatchResultOverview result);
 
@@ -86,19 +83,10 @@ public class MatchService : IMatchService
 
     public async Task UpdateMatchResultAsync(int matchId, MatchResultOverview result)
     {
-        await _uow.Matches.UpdateMatchResultAsync(matchId, result);
+        var match = await _uow.Matches.UpdateMatchResultAsync(matchId, result);
 
         await _uow.SaveChangesAsync();
-        //TODO await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
-    }
-
-    private async Task DeleteMatchAsync(int id, int tournamentId)
-    {
-        var entity = await CheckMatchAsync(id, tournamentId, nameof(Match.Tournament));
-        _uow.Matches.Remove(entity);
-
-        await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
     }
 
     public async Task DeleteMatchResultAsync(int id)
@@ -107,20 +95,6 @@ public class MatchService : IMatchService
         entity.Sets.Clear();
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
-    }
-
-    public async Task<Match> AddMatchAsync(Match match)
-    {
-        if (match.Id != 0)
-        {
-            throw new IllegalValuesException("Id must be 0 for new entities");
-        }
-
-        await _uow.Matches.AddAsync(match);
-        await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Id); //TODO: Notify tournament by registration pin instead of match id
-
-        return match;
     }
 
     #endregion
@@ -141,14 +115,26 @@ public class MatchService : IMatchService
 
         if (match.AcceptA == match.AcceptB)
         {
-            await SetWinnerAsync(matchId, result);
+            await SetWinnerAsync(match, result);
         }
+
+        await _uow.SaveChangesAsync();
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
+
     }
 
     public async Task SetWinnerAsync(int matchId, MatchResult winner)
     {
         var match = await GetActiveMatchAsync(matchId);
 
+        await SetWinnerAsync(match, winner);
+
+        await _uow.SaveChangesAsync();
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
+    }
+
+    private async Task SetWinnerAsync(Match match, MatchResult winner)
+    {
         match.Result = winner;
 
         var winnerId = winner == MatchResult.WonA ? match.TeamAId : match.TeamBId;
@@ -178,7 +164,7 @@ public class MatchService : IMatchService
 
     private async Task<Match> GetActiveMatchAsync(int matchId)
     {
-        var match = await _uow.Matches.GetByIdAsync(matchId, nameof(Match.NextMatch));
+        var match = await _uow.Matches.GetByIdAsync(matchId, nameof(Match.NextMatch), nameof(Match.Tournament));
         if (match is null)
         {
             throw new NotFoundException($"Match not found! {matchId}");
