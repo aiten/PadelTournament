@@ -54,10 +54,12 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
         {
             query = query.Include(t => t.Teams);
         }
+
         if (loadMatches)
         {
             query = query.Include(t => t.Matches);
         }
+
         return await query.FirstOrDefaultAsync();
     }
 }

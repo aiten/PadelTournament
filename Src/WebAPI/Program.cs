@@ -12,7 +12,6 @@ using Keycloak.AuthServices.Authorization;
 using Keycloak.AuthServices.Common;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -88,7 +87,7 @@ builder.Services
             .RequireResourceRoles(Settings.KeycloakUserRoleName, Settings.KeycloakAdminRoleName);
     });
 
-    builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpContextAccessor();
 var kcOptions       = builder.Configuration.GetKeycloakOptions<KeycloakAuthenticationOptions>()!;
 var keycloakBaseUrl = $"{kcOptions.AuthServerUrl!.TrimEnd('/')}/realms/{kcOptions.Realm}/protocol/openid-connect";
 
@@ -163,7 +162,7 @@ builder.Services
     .AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork>())
     .AddAssemblyIncludingInternals(name => name.EndsWith("Repository"), ServiceLifetime.Transient, typeof(ApplicationDbContext).Assembly)
     .AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(TournamentService).Assembly);
-    ;
+;
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 

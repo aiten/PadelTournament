@@ -13,9 +13,9 @@ public interface IUnitOfWork : IBaseUnitOfWork
 public class UnitOfWork : BaseUnitOfWork, IUnitOfWork
 {
     public UnitOfWork(ApplicationDbContext dBContext,
-        ITournamentRepository tournaments,
-        ITeamRepository       teams,
-        IMatchRepository      matches
+        ITournamentRepository              tournaments,
+        ITeamRepository                    teams,
+        IMatchRepository                   matches
     ) : base(dBContext)
     {
         Tournaments = tournaments;

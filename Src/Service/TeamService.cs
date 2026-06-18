@@ -67,7 +67,7 @@ public class TeamService : ITeamService
         var entity = await CheckTeamAsync(id, tournamentId, nameof(Team.Tournament));
 
         entity.Player1 = player1;
-        entity.Player2 = player2;
+        entity.Player2 = string.IsNullOrEmpty(player2) ? null : player2;
         ApplySeedOrStartMatchPos(entity, seed, startMatchPos);
 
         await _uow.SaveChangesAsync();

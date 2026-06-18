@@ -14,7 +14,7 @@ public class TournamentRange : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        var to        = (DateOnly)value;
+        var to         = (DateOnly)value;
         var tournament = (Tournament)validationContext.ObjectInstance;
 
         if (to <= tournament.From)

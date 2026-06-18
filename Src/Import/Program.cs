@@ -33,7 +33,7 @@ builder.Services
     .AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork>())
     .AddAssemblyIncludingInternals(name => name.EndsWith("Repository"), ServiceLifetime.Transient, typeof(ApplicationDbContext).Assembly)
     .AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(TournamentService).Assembly);
-    ;
+;
 
 builder.Services.AddSingleton<IHubNotificationService, DummyHubNotificationService>();
 
@@ -53,7 +53,7 @@ Console.WriteLine("Import Data");
 
 using (var scope = host.Services.CreateScope())
 {
-    var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+    var uow     = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
     var service = scope.ServiceProvider.GetRequiredService<ITournamentService>();
 /*
         var classesCsv = await new CsvImport<ClassesCsv>().ReadAsync("ImportData/Classes2025.csv");
@@ -96,9 +96,9 @@ using (var scope = host.Services.CreateScope())
             var  parts = raw.Split(';');
             var  name  = parts[0].Trim();
             int? seed  = parts.Length > 1 && int.TryParse(parts[1].Trim(), out var s1) ? s1 : null;
-            int? pos  = parts.Length > 2 && int.TryParse(parts[2].Trim(), out var s2) ? s2 : null;
+            int? pos   = parts.Length > 2 && int.TryParse(parts[2].Trim(), out var s2) ? s2 : null;
 
-            return (Name: name, Seed: seed, SrateMatchPos:pos); 
+            return (Name: name, Seed: seed, SrateMatchPos: pos);
         })
         .ToList();
 
@@ -106,7 +106,6 @@ using (var scope = host.Services.CreateScope())
     await service.RegisterTeamsAsync(tournaments[0].Id, entries);
 
     await uow.SaveChangesAsync();
-
 }
 
 Console.WriteLine("done");

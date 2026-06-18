@@ -62,8 +62,7 @@ public class TournamentService : ITournamentService
 
     public async Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties)
     {
-        var entity = await _uow.Tournaments.GetByIdAsync(id, includeProperties);
-        return entity;
+        return await _uow.Tournaments.GetByIdAsync(id, includeProperties);
     }
 
     public async Task<Tournament> SingleTournamentAsync(int id, params string[] includeProperties)
@@ -73,12 +72,7 @@ public class TournamentService : ITournamentService
 
     public async Task UpdateTournamentAsync(int id, Tournament tournament)
     {
-        var entity = await _uow.Tournaments.GetByIdAsync(id);
-
-        if (entity == null)
-        {
-            throw new NotFoundException($"Tournament {id} not found");
-        }
+        var entity = await SingleTournamentAsync(id);
 
         entity.Description     = tournament.Description;
         entity.RegistrationPin = tournament.RegistrationPin;
@@ -90,31 +84,26 @@ public class TournamentService : ITournamentService
         await _hub.NotifyTournamentUpdatedAsync(id);
     }
 
-    public async Task<Tournament> AddTournamentAsync(Tournament Tournament)
+    public async Task<Tournament> AddTournamentAsync(Tournament tournament)
     {
-        if (Tournament.Id != 0)
+        if (tournament.Id != 0)
         {
             throw new IllegalValuesException("Id must be 0 for new entities");
         }
 
-        Tournament.Created  = DateTime.Now;
-        Tournament.Modified = null;
+        tournament.Created  = DateTime.Now;
+        tournament.Modified = null;
 
-        await _uow.Tournaments.AddAsync(Tournament);
+        await _uow.Tournaments.AddAsync(tournament);
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentUpdatedAsync(Tournament.Id);
+        await _hub.NotifyTournamentUpdatedAsync(tournament.Id);
 
-        return Tournament;
+        return tournament;
     }
 
     public async Task DeleteTournamentAsync(int id)
     {
-        var entity = await _uow.Tournaments.GetByIdAsync(id, nameof(Tournament.Teams), nameof(Tournament.Matches));
-
-        if (entity == null)
-        {
-            throw new NotFoundException($"Tournament {id} not found");
-        }
+        var entity = await SingleTournamentAsync(id, nameof(Tournament.Teams), nameof(Tournament.Matches));
 
         _uow.Teams.RemoveRange(entity.Teams);
         _uow.Matches.RemoveRange(entity.Matches);
@@ -130,13 +119,9 @@ public class TournamentService : ITournamentService
 
     public async Task<Tournament> GenerateMatchScheduleAsync(int tournamentId)
     {
-        var tournament = await _uow.Tournaments.GetByIdAsync(tournamentId, nameof(Tournament.Teams));
-        if (tournament is null)
-        {
-            throw new NotFoundException($"No tournament found with ID {tournamentId}");
-        }
+        var tournament = await SingleTournamentAsync(tournamentId, nameof(Tournament.Teams), nameof(Tournament.Matches));
 
-        bool hasMatches = await _uow.Matches.AnyTournamentAsync(tournamentId);
+        bool hasMatches = tournament.Matches.Any();
         if (hasMatches)
             throw new InvalidTournamentDataException("Matches already exist for this tournament");
 
@@ -363,9 +348,7 @@ public class TournamentService : ITournamentService
 
     public async Task<Team> RegisterTeamByPinAsync(string name, int pin)
     {
-        var tournament = await _uow.Tournaments.GetByPinAsync(pin);
-        if (tournament is null)
-            throw new NotFoundException($"No tournament found with PIN {pin}");
+        var tournament = await _uow.Tournaments.GetByPinAsync(pin) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
 
         return await RegisterTeamAsync(tournament, name, null, null, true);
     }
@@ -373,7 +356,7 @@ public class TournamentService : ITournamentService
     private async Task<Team> RegisterTeamAsync(Tournament tournament, string name, int? seed, int? startMatchPos, bool notify)
     {
         bool alreadyStarted = await _uow.Matches
-            .AnyTournamentAsync(tournament.Id);
+            .AnyMatchesInTournamentAsync(tournament.Id);
         if (alreadyStarted)
             throw new InvalidTournamentDataException($"Tournament '{name}' is already started");
 
@@ -392,7 +375,9 @@ public class TournamentService : ITournamentService
             Player2          = player2,
             RegistrationCode = await GenerateUniqueRegistrationCodeAsync(tournament.Id),
             RegistrationDate = DateTime.Now,
-            Tournament       = tournament
+            Tournament       = tournament,
+            Seed             = startMatchPos.HasValue ? null : seed,
+            StartMatchPos    = startMatchPos
         };
 
         await _uow.Teams.AddAsync(registration);

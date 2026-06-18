@@ -25,5 +25,4 @@ public class Tournament : EntityObject
 
     public ICollection<Team>  Teams   { get; set; } = new List<Team>();
     public ICollection<Match> Matches { get; set; } = new List<Match>();
-
 }

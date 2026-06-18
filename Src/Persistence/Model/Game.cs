@@ -4,8 +4,8 @@ using Base.Persistence.Model;
 
 public class Game : EntityObject
 {
-    public int    No       { get; set; }
-    public string Points   { get; set; } = null!;
+    public int    No     { get; set; }
+    public string Points { get; set; } = null!;
 
     public Server? Server { get; set; }
 

@@ -56,28 +56,28 @@ public static class MatchResultEndpoints
         if (dto is null) return null;
 
         return new MatchResultOverview(
-                dto.Id,
-                string.Empty,
-                string.Empty,
-                string.IsNullOrEmpty(dto.Result) ? null : Enum.Parse<MatchResult>(dto.Result),
-                dto.Sets.Select(set =>
+            dto.Id,
+            string.Empty,
+            string.Empty,
+            string.IsNullOrEmpty(dto.Result) ? null : Enum.Parse<MatchResult>(dto.Result),
+            dto.Sets.Select(set =>
+            {
+                var  col            = set.Result.Split('-', ':');
+                int? tieBreakPoints = null;
+                int  tieBreakIdx    = col[1].IndexOf('(');
+                if (tieBreakIdx != -1)
                 {
-                    var  col            = set.Result.Split('-',':');
-                    int? tieBreakPoints = null;
-                    int  tieBreakIdx    = col[1].IndexOf('(');
-                    if (tieBreakIdx != -1)
-                    {
-                        tieBreakPoints = int.Parse(col[1].Substring(tieBreakIdx + 1, col[1].IndexOf(')') - tieBreakIdx - 1));
-                        col[1]         = col[1].Substring(0, tieBreakIdx);
-                    }
+                    tieBreakPoints = int.Parse(col[1].Substring(tieBreakIdx + 1, col[1].IndexOf(')') - tieBreakIdx - 1));
+                    col[1]         = col[1].Substring(0, tieBreakIdx);
+                }
 
-                    return new SetResultOverview(
-                        set.No,
-                        int.Parse(col[0]),
-                        int.Parse(col[1]),
-                        tieBreakPoints,
-                        set.Games
-                            .Select((gameScore, gameIndex) =>
+                return new SetResultOverview(
+                    set.No,
+                    int.Parse(col[0]),
+                    int.Parse(col[1]),
+                    tieBreakPoints,
+                    set.Games
+                        .Select((gameScore, gameIndex) =>
                             {
                                 var colGame = gameScore.Split(':');
                                 return new GameResultOverview(
@@ -85,10 +85,9 @@ public static class MatchResultEndpoints
                                     colGame.Length > 1 ? Enum.Parse<Server>(colGame[0]) : null,
                                     colGame[^1]);
                             }
-
-                            ).ToList());
-                }).ToList()
-            );
+                        ).ToList());
+            }).ToList()
+        );
     }
 
     #endregion

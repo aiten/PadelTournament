@@ -7,8 +7,8 @@ using Base.Persistence.Model;
 
 public class Match : EntityObject
 {
-    public int   Round   { get; set; }
-    public int   No      { get; set; }
+    public int Round { get; set; }
+    public int No    { get; set; }
 
     public Team? TeamA   { get; set; } = null!;
     public int?  TeamAId { get; set; }
@@ -22,12 +22,12 @@ public class Match : EntityObject
     public int?   NextMatchId { get; set; }
 
     public Tournament Tournament   { get; set; } = null!;
-    public int       TournamentId { get; set; }
+    public int        TournamentId { get; set; }
 
-    public MatchResult? Result    { get; set; }
+    public MatchResult? Result { get; set; }
 
     public MatchResult? AcceptA { get; set; }
-    
+
     public MatchResult? AcceptB { get; set; }
 
     public string? Remark { get; set; }

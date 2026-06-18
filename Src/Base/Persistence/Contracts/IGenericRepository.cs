@@ -24,7 +24,7 @@ public interface IGenericRepository<TEntity> where TEntity : class, IEntityObjec
 
     Task<bool> ExistsAsync(int id);
 
-    void Remove(TEntity                  entity);
+    void Remove(TEntity entity);
 
     void RemoveRange(IEnumerable<TEntity> entity);
 

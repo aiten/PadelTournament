@@ -64,7 +64,7 @@ public static class PublicEndpoints
 
         routeTeam.MapPut("/matches/{matchId:int}/result", async (int pin, string registrationCode, int matchId, PublicMatchResultDto dto, ITeamService teamService, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                var team = await teamService.SingleByRegistrationAsync(pin, registrationCode);
+                var team  = await teamService.SingleByRegistrationAsync(pin, registrationCode);
                 var match = await matchService.SingleMatchForTeamAsync(matchId, team.Id);
 
                 var isForA = match.TeamAId == team.Id;

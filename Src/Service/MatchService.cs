@@ -22,9 +22,7 @@ public interface IMatchService
 
     Task UpdateMatchResultAsync(int matchId, MatchResultOverview result);
 
-    Task DeleteMatchAsync(int id, int tournamentId);
-
-    Task DeleteMatchResultAsync(int    id);
+    Task DeleteMatchResultAsync(int id);
 
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
@@ -94,7 +92,7 @@ public class MatchService : IMatchService
         //TODO await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
     }
 
-    public async Task DeleteMatchAsync(int id, int tournamentId)
+    private async Task DeleteMatchAsync(int id, int tournamentId)
     {
         var entity = await CheckMatchAsync(id, tournamentId, nameof(Match.Tournament));
         _uow.Matches.Remove(entity);
@@ -102,9 +100,10 @@ public class MatchService : IMatchService
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
     }
+
     public async Task DeleteMatchResultAsync(int id)
     {
-        var entity = await SingleMatchAsync(id,nameof(Match.Sets), nameof(Match.Tournament));
+        var entity = await SingleMatchAsync(id, nameof(Match.Sets), nameof(Match.Tournament));
         entity.Sets.Clear();
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
@@ -197,6 +196,4 @@ public class MatchService : IMatchService
 
         return match;
     }
-
-
 }

@@ -13,8 +13,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Tournament> Tournaments { get; set; }
     public DbSet<Team>       Teams       { get; set; }
     public DbSet<Match>      Matches     { get; set; }
-    public DbSet<Set>  Sets  { get; set; }
-    public DbSet<Game> Games { get; set; }
+    public DbSet<Set>        Sets        { get; set; }
+    public DbSet<Game>       Games       { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

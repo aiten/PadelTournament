@@ -12,9 +12,9 @@
     </ShowAsCollectionAssociation>
   </Class>
   <Class Name="Persistence.Model.Match">
-    <Position X="11" Y="3" Width="1.5" />
+    <Position X="10.75" Y="3" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AgAAQAAAAiQAABAAAgAAIAQAACAEAAAAAAAAAAIAAQA=</HashCode>
+      <HashCode>AgAAQAAAAiQAABAAAkACKAQAACAEAAAAAAAAAAIAAQA=</HashCode>
       <FileName>Model\Match.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
@@ -23,15 +23,41 @@
       <Property Name="NextMatch" />
       <Property Name="Tournament" />
     </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="Sets" />
+    </ShowAsCollectionAssociation>
   </Class>
   <Class Name="Persistence.Model.Team">
     <Position X="8" Y="1.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>CgAAAAAAAAAAAAAAAAAAAAQAAQAEAAABAAAAAAAAAAA=</HashCode>
+      <HashCode>CgAAAAAAAAAIAAAAwEAAAAQAAQAEAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Model\Team.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="Tournament" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Persistence.Model.Set">
+    <Position X="13.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QAAgAgAAAAAAAAgAAAAAAAAQACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Model\Set.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Match" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="Games" />
+    </ShowAsCollectionAssociation>
+  </Class>
+  <Class Name="Persistence.Model.Game">
+    <Position X="16.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAApAAAAAAAAAAAACAAAAAAAAAAAgAAAAA=</HashCode>
+      <FileName>Model\Game.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Set" />
     </ShowAsAssociation>
   </Class>
   <Font Name="Segoe UI" Size="9" />
