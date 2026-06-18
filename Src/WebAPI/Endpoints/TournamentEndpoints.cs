@@ -97,16 +97,7 @@ public static class TournamentEndpoints
 
         route.MapGet("/{id:int}", async (int id, ITournamentService service) =>
             {
-                var dto = ToDto(await service.GetByIdAsync(id));
-
-                if (dto is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Tournament not found",
-                        detail: $"No Tournament found with ID {id}");
-                }
-
+                var dto = ToDto(await service.SingleAsync(id));
                 return Results.Ok(dto);
             })
             .WithName("GetTournament")

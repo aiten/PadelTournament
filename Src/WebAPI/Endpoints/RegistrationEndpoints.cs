@@ -1,6 +1,6 @@
 namespace WebAPI.Endpoints;
 
-using System;
+using Base.Persistence.Contracts;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Routing;
 using Persistence;
 
 using Service;
+
+using System;
 
 using WebAPI.Filters;
 
@@ -25,15 +27,14 @@ public static class RegistrationEndpoints
             .WithTags("Registration");
         // NO Auth required .RequireAuthorization(Settings.AdminPolicyName);
 
-        route.MapPost("", async (TeamRegistrationDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        route.MapPost("", async (TeamRegistrationDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 try
                 {
-                    using var trans        = await uow.BeginTransactionAsync();
-                    var       registration = await uow.Tournaments.RegisterTeamByPinAsync(dto.Name, dto.Pin);
+                    using var trans        = await transactionProvider.BeginTransactionAsync();
+                    var       registration = await service.RegisterTeamByPinAsync(dto.Name, dto.Pin);
 
                     await trans.CommitTransactionAsync();
-                    await hub.NotifyTournamentTeamUpdatedAsync(dto.Pin);
 
                     return Results.Created($"/api/public/{dto.Pin}/{registration.RegistrationCode}",
                         new TeamRegistrationResultDto(

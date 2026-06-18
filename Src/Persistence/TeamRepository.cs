@@ -15,6 +15,9 @@ public interface ITeamRepository : IGenericRepository<Team>
 {
     Task<IList<Team>> GetByTournamentAsync(int   tournamentId);
     Task<Team?>       GetByRegistrationAsync(int pin, string registrationCode);
+
+    Task<bool> AnyPlayerAsync(int tournamentId, string player1, string? player2);
+    Task<bool> AnyRegistrationCodeAsync(int tournamentId, string code);
 }
 
 public class TeamRepository : GenericRepository<Team>, ITeamRepository
@@ -28,7 +31,7 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
 
     public async Task<IList<Team>> GetByTournamentAsync(int tournamentId)
     {
-        return await _dbContext.Teams
+        return await DbSet
             .AsNoTracking()
             .Where(t => t.TournamentId == tournamentId)
             .OrderBy(t => t.Player1).ThenBy(t => t.Player2)
@@ -37,10 +40,20 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
 
     public async Task<Team?> GetByRegistrationAsync(int pin, string registrationCode)
     {
-        return await _dbContext.Teams
+        return await DbSet
             .AsNoTracking()
             .Include(t => t.Tournament)
             .Where(t => t.RegistrationCode == registrationCode && t.Tournament.RegistrationPin == pin)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<bool> AnyPlayerAsync(int tournamentId, string player1, string? player2)
+    {
+        return await DbSet.AnyAsync(t => t.TournamentId == tournamentId && t.Player1 == player1 && t.Player2 == player2);
+    }
+
+    public async Task<bool> AnyRegistrationCodeAsync(int tournamentId, string code)
+    {
+        return await DbSet.AnyAsync(t => t.TournamentId == tournamentId && t.RegistrationCode == code);
     }
 }

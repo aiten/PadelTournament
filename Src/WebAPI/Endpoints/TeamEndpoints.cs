@@ -1,8 +1,6 @@
 namespace WebAPI.Endpoints;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Base.Persistence.Contracts;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -12,6 +10,12 @@ using Persistence;
 using Persistence.Model;
 
 using Service;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using Shared.Exceptions;
 
 using WebAPI.Filters;
 
@@ -49,20 +53,6 @@ public static class TeamEndpoints
             entity.RegistrationCode);
     }
 
-    private static void ApplySeedOrStartMatchPos(Team entity, TeamDto dto)
-    {
-        if (dto.StartMatchPos.HasValue)
-        {
-            entity.StartMatchPos = dto.StartMatchPos;
-            entity.Seed          = null;
-        }
-        else
-        {
-            entity.StartMatchPos = null;
-            entity.Seed          = dto.Seed;
-        }
-    }
-
     #endregion
 
     public static void MapTeamEndpoints(this IEndpointRouteBuilder app, string baseRoute)
@@ -79,23 +69,20 @@ public static class TeamEndpoints
             .WithTags("Teams")
             .RequireAuthorization(Settings.AdminPolicyName);
 
-        routeRead.MapGet("", async (int tournamentId, IUnitOfWork uow) =>
+        routeRead.MapGet("", async (int tournamentId, ITournamentService service) =>
             {
-                var teams = await uow.Teams.GetByTournamentAsync(tournamentId);
-                return Results.Ok(teams.Select(ToDto).ToList());
+                var tournament = await service.SingleAsync(tournamentId, nameof(Tournament.Teams));
+                return Results.Ok(tournament.Teams.Select(ToDto).ToList());
             })
             .WithName("GetTeams")
             .Produces<List<TeamDto>>(StatusCodes.Status200OK);
 
-        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, IUnitOfWork uow) =>
+        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, ITeamService service) =>
             {
-                var entity = await uow.Teams.GetByIdAsync(id);
-                if (entity is null || entity.TournamentId != tournamentId)
+                var entity = await service.SingleAsync(id);
+                if (entity.TournamentId != tournamentId)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Team not found",
-                        detail: $"No team found with ID {id} in tournament {tournamentId}");
+                    throw new NotFoundException($"No team found with ID {id} in tournament {tournamentId}");
                 }
 
                 return Results.Ok(ToDto(entity));
@@ -104,81 +91,52 @@ public static class TeamEndpoints
             .Produces<TeamDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, ITournamentService service, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
                 if (dto.Id != 0)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The ID in the request body must be 0");
+                    throw new IllegalValuesException("The ID in the request body must be 0");
                 }
 
                 if (dto.TournamentId != tournamentId)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The TournamentId in the body does not match the URL");
+                    throw new IllegalValuesException("The TournamentId in the body does not match the URL");
                 }
 
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
                 var teamName = dto.Player2 is null ? dto.Player1 : $"{dto.Player1}/{dto.Player2}";
-                var entity   = await uow.Tournaments.RegisterTeamAsync(tournamentId, teamName);
-
-                ApplySeedOrStartMatchPos(entity, dto);
+                var entity   = await service.RegisterTeamAsync(tournamentId, teamName, dto.Seed, dto.StartMatchPos);
 
                 await trans.CommitTransactionAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentTeamUpdatedAsync(pin);
 
                 int id = entity.Id;
                 return Results.Created(
                     $"{baseRoute}/{tournamentId}/teams/{id}",
-                    ToDto(await uow.Teams.GetByIdAsync(id)));
+                    ToDto(await teamService.GetByIdAsync(id)));
             })
             .WithValidation<TeamDto>()
             .WithName("AddTeam")
             .Produces<TeamDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
                 if (id != dto.Id)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The ID in the URL does not match the ID in the request body");
+                    throw new IllegalValuesException("The ID in the URL does not match the ID in the request body");
                 }
 
                 if (dto.TournamentId != tournamentId)
                 {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The TournamentId in the body does not match the URL");
+                    throw new IllegalValuesException("The TournamentId in the body does not match the URL");
                 }
 
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                var entity = await uow.Teams.GetByIdAsync(id);
-                if (entity is null || entity.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: $"No team found with ID {id} in tournament {tournamentId}");
-                }
-
-                entity.Player1 = dto.Player1;
-                entity.Player2 = dto.Player2;
-                ApplySeedOrStartMatchPos(entity, dto);
+                await teamService.UpdateAsync(id, tournamentId, dto.Player1, dto.Player2, dto.Seed, dto.StartMatchPos);
 
                 await trans.CommitTransactionAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentTeamUpdatedAsync(pin);
 
                 return Results.NoContent();
             })
@@ -187,21 +145,13 @@ public static class TeamEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapDelete("/{id:int}", async (int tournamentId, int id, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapDelete("/{id:int}", async (int tournamentId, int id, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
-                var entity = await uow.Teams.GetByIdAsync(id);
-                if (entity is null || entity.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Team not found",
-                        detail: $"No team found with ID {id} in tournament {tournamentId}");
-                }
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                uow.Teams.Remove(entity);
-                await uow.SaveChangesAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentTeamUpdatedAsync(pin);
+                await teamService.DeleteTeamAsync(id, tournamentId);
+
+                await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })
@@ -209,7 +159,7 @@ public static class TeamEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 var entries = dto.TeamsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Select(raw =>
@@ -223,25 +173,15 @@ public static class TeamEndpoints
                     })
                     .ToList();
 
-                try
-                {
-                    using var trans      = await uow.BeginTransactionAsync();
-                    var       teams      = await uow.Tournaments.RegisterTeamsAsync(tournamentId, entries);
-                    var       tournament = await uow.Tournaments.GetByIdAsync(tournamentId);
-                    await trans.CommitTransactionAsync();
-                    await hub.NotifyTournamentTeamUpdatedAsync(tournament?.RegistrationPin ?? 0);
+                using var trans      = await transactionProvider.BeginTransactionAsync();
+                var       teams      = await service.RegisterTeamsAsync(tournamentId, entries);
+                var       tournament = await service.GetByIdAsync(tournamentId);
 
-                    return Results.Ok(teams
-                        .Select(t => new TeamRegistrationResultDto(t.Name, tournament?.RegistrationPin ?? 0, t.RegistrationCode!))
-                        .ToList());
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Bulk registration failed",
-                        detail: ex.Message);
-                }
+                await trans.CommitTransactionAsync();
+
+                return Results.Ok(teams
+                    .Select(t => new TeamRegistrationResultDto(t.Name, tournament?.RegistrationPin ?? 0, t.RegistrationCode!))
+                    .ToList());
             })
             .WithName("RegisterTeamsBulk")
             .Produces<List<TeamRegistrationResultDto>>(StatusCodes.Status200OK)

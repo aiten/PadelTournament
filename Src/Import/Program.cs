@@ -9,9 +9,12 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Base.Persistence.Contracts;
 using Base.Tools;
 
 using Persistence.Model;
+
+using Service;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -23,8 +26,11 @@ var connectionString = configuration.GetConnectionString("DefaultConnection") ??
 builder.Services
     .AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlServer(connectionString))
-    .AddScoped<IUnitOfWork, UnitOfWork>()
+    .AddScoped<UnitOfWork>()
+    .AddScoped<ITransactionProvider>(sp => sp.GetRequiredService<UnitOfWork>())
+    .AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork>())
     .AddAssemblyIncludingInternals(name => name.EndsWith("Repository"), ServiceLifetime.Transient, typeof(ApplicationDbContext).Assembly)
+    .AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(TournamentService).Assembly);
     ;
 
 var host = builder.Build();
@@ -44,12 +50,13 @@ Console.WriteLine("Import Data");
 using (var scope = host.Services.CreateScope())
 {
     var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+    var service = scope.ServiceProvider.GetRequiredService<ITournamentService>();
 /*
-    var classesCsv = await new CsvImport<ClassesCsv>().ReadAsync("ImportData/Classes2025.csv");
+        var classesCsv = await new CsvImport<ClassesCsv>().ReadAsync("ImportData/Classes2025.csv");
 
 
-    await uow.Classes.AddRangeAsync(classes);
-*/
+        await uow.Classes.AddRangeAsync(classes);
+    */
 
     var tournaments = new[]
     {
@@ -76,7 +83,7 @@ using (var scope = host.Services.CreateScope())
 
     for (int i = 1; i < 30; i++)
     {
-        await uow.Tournaments.RegisterTeamByPinAsync($"Team {i}", 321);
+        await service.RegisterTeamByPinAsync($"Team {i}", 321);
     }
 
     var entries = (await File.ReadAllLinesAsync("ImportData/Bibione202509.txt"))
@@ -92,7 +99,7 @@ using (var scope = host.Services.CreateScope())
         .ToList();
 
 
-    await uow.Tournaments.RegisterTeamsAsync(tournaments[0].Id, entries);
+    await service.RegisterTeamsAsync(tournaments[0].Id, entries);
 
     await uow.SaveChangesAsync();
 
