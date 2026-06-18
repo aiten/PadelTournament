@@ -1,5 +1,7 @@
 ﻿namespace Service;
 
+using System.Collections.Generic;
+
 using Microsoft.Extensions.Logging;
 
 using Persistence;
@@ -11,13 +13,16 @@ using System.Threading.Tasks;
 
 public interface ITeamService
 {
-    Task<Team?> GetByIdAsync(int id, params string[] includeProperties);
-    Task<Team>  SingleAsync(int  id, params string[] includeProperties);
+    Task<Team?> GetTeamByIdAsync(int id, params string[] includeProperties);
+    Task<Team>  SingleTeamAsync(int  id, params string[] includeProperties);
 
-    Task UpdateAsync(int id, int tournamentId, string player1, string? player2, int? seed, int? startMatchPos);
+    Task UpdateTeamAsync(int id, int tournamentId, string player1, string? player2, int? seed, int? startMatchPos);
 
     Task DeleteTeamAsync(int id, int tournamentId);
 
+    Task<Team> SingleByRegistrationAsync(int pin, string registrationCode);
+
+    Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId);
 }
 
 public class TeamService : ITeamService
@@ -35,28 +40,29 @@ public class TeamService : ITeamService
 
     #region REST
 
-    public async Task<Team?> GetByIdAsync(int id, params string[] includeProperties)
+    public async Task<Team?> GetTeamByIdAsync(int id, params string[] includeProperties)
     {
         var entity = await _uow.Teams.GetByIdAsync(id, includeProperties);
         return entity;
     }
 
-    public async Task<Team> SingleAsync(int id, params string[] includeProperties)
+    public async Task<Team> SingleTeamAsync(int id, params string[] includeProperties)
     {
-        return (await GetByIdAsync(id, includeProperties)) ?? throw new NotFoundException($"Team {id} not found");
+        return (await GetTeamByIdAsync(id, includeProperties)) ?? throw new NotFoundException($"Team {id} not found");
     }
 
     private async Task<Team> CheckTeamAsync(int id, int tournamentId, params string[] includeProperties)
     {
-        var entity = await SingleAsync(id, includeProperties);
+        var entity = await SingleTeamAsync(id, includeProperties);
         if (entity.TournamentId != tournamentId)
         {
             throw new NotFoundException($"Team {id} not found in tournament {tournamentId}");
         }
+
         return entity;
     }
 
-    public async Task UpdateAsync(int id, int tournamentId, string player1, string? player2, int? seed, int? startMatchPos)
+    public async Task UpdateTeamAsync(int id, int tournamentId, string player1, string? player2, int? seed, int? startMatchPos)
     {
         var entity = await CheckTeamAsync(id, tournamentId, nameof(Team.Tournament));
 
@@ -65,7 +71,7 @@ public class TeamService : ITeamService
         ApplySeedOrStartMatchPos(entity, seed, startMatchPos);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentTeamUpdatedAsync(entity.Tournament.RegistrationPin??0);
+        await _hub.NotifyTournamentTeamUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
     }
 
     public async Task DeleteTeamAsync(int id, int tournamentId)
@@ -92,4 +98,15 @@ public class TeamService : ITeamService
     }
 
     #endregion
+
+    public async Task<Team> SingleByRegistrationAsync(int pin, string registrationCode)
+    {
+        var team = await _uow.Teams.GetByRegistrationAsync(pin, registrationCode);
+        return team ?? throw new NotFoundException("No team found for the given pin and registration code");
+    }
+
+    public async Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId)
+    {
+        return await _uow.Matches.GetByTeamAsync(teamId);
+    }
 }

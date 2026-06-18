@@ -4,12 +4,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Base.Persistence.Contracts;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
 using Persistence;
 using Persistence.Model;
+
+using Service;
+
+using Shared.Exceptions;
 
 public record PublicMatchResultDto(bool Won);
 
@@ -26,16 +32,9 @@ public static class PublicEndpoints
             .MapGroup($"{baseRoute}/{{pin:int}}")
             .WithTags("Public");
 
-        routeTeam.MapGet("/team", async (int pin, string registrationCode, IUnitOfWork uow) =>
+        routeTeam.MapGet("/team", async (int pin, string registrationCode, ITeamService teamService) =>
             {
-                var team = await uow.Teams.GetByRegistrationAsync(pin, registrationCode);
-                if (team is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Team not found",
-                        detail: "No team found for the given pin and registration code");
-                }
+                var team = await teamService.SingleByRegistrationAsync(pin, registrationCode);
 
                 return Results.Ok(new TeamDto(
                     team.Id,
@@ -52,18 +51,10 @@ public static class PublicEndpoints
             .Produces<TeamDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeTeam.MapGet("/matches", async (int pin, string registrationCode, IUnitOfWork uow) =>
+        routeTeam.MapGet("/matches", async (int pin, string registrationCode, ITeamService teamService) =>
             {
-                var team = await uow.Teams.GetByRegistrationAsync(pin, registrationCode);
-                if (team is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Team not found",
-                        detail: "No team found for the given pin and registration code");
-                }
-
-                var matches = await uow.Matches.GetByTeamAsync(team.Id);
+                var team    = await teamService.SingleByRegistrationAsync(pin, registrationCode);
+                var matches = await teamService.GetMatchesByTeamIdAsync(team.Id);
 
                 return Results.Ok(matches.Select(MatchEndpoints.ToDto).ToList());
             })
@@ -71,44 +62,19 @@ public static class PublicEndpoints
             .Produces<List<MatchDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeTeam.MapPut("/matches/{matchId:int}/result", async (int pin, string registrationCode, int matchId, PublicMatchResultDto dto, IUnitOfWork uow) =>
+        routeTeam.MapPut("/matches/{matchId:int}/result", async (int pin, string registrationCode, int matchId, PublicMatchResultDto dto, ITeamService teamService, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                var team = await uow.Teams.GetByRegistrationAsync(pin, registrationCode);
-                if (team is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Team not found",
-                        detail: "No team found for the given pin and registration code");
-                }
-
-                var match = await uow.Matches.GetByIdAsync(matchId);
-                if (match is null || (match.TeamAId != team.Id && match.TeamBId != team.Id))
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {matchId} for this team");
-                }
+                var team = await teamService.SingleByRegistrationAsync(pin, registrationCode);
+                var match = await matchService.SingleMatchForTeamAsync(matchId, team.Id);
 
                 var isForA = match.TeamAId == team.Id;
                 var winner = isForA
                     ? (dto.Won ? MatchResult.WonA : MatchResult.WonB)
                     : (dto.Won ? MatchResult.WonB : MatchResult.WonA);
 
-                try
-                {
-                    using var trans = await uow.BeginTransactionAsync();
-                    await uow.Matches.AcceptResultAsync(matchId, isForA, winner);
-                    await trans.CommitTransactionAsync();
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Cannot set result",
-                        detail: ex.Message);
-                }
+                using var trans = await transactionProvider.BeginTransactionAsync();
+                await matchService.AcceptResultAsync(matchId, isForA, winner);
+                await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })
@@ -117,18 +83,9 @@ public static class PublicEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeTournament.MapGet("", async (int pin, IUnitOfWork uow) =>
+        routeTournament.MapGet("", async (int pin, ITournamentService tournamentService) =>
             {
-                var tournament = TournamentEndpoints.ToDto(await uow.Tournaments.GetByPinAsync(pin));
-
-                if (tournament is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Tournament not found",
-                        detail: $"No Tournament found with Pin {pin}");
-                }
-
+                var tournament = TournamentEndpoints.ToDto(await tournamentService.SingleTournamentByPinAsync(pin));
                 return Results.Ok(tournament);
             })
             .WithName("GetPublicTournament")
@@ -136,18 +93,11 @@ public static class PublicEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeTournament.MapGet("/teams", async (int pin, IUnitOfWork uow) =>
+        routeTournament.MapGet("/teams", async (int pin, ITournamentService tournamentService) =>
             {
-                var tournament = await uow.Tournaments.GetByPinAsync(pin);
-                if (tournament is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Tournament not found",
-                        detail: "No tournament found for the given pin");
-                }
+                var tournament = await tournamentService.SingleTournamentByPinAsync(pin, loadTeams: true);
 
-                var teams = await uow.Teams.GetByTournamentAsync(tournament.Id);
+                var teams = tournament.Teams;
                 return Results.Ok(teams.Select(t => new TeamDto(
                     t.Id,
                     t.TournamentId,
@@ -163,18 +113,11 @@ public static class PublicEndpoints
             .Produces<List<TeamDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeTournament.MapGet("/matches", async (int pin, IUnitOfWork uow) =>
+        routeTournament.MapGet("/matches", async (int pin, ITournamentService tournamentService) =>
             {
-                var tournament = await uow.Tournaments.GetByPinAsync(pin);
-                if (tournament is null)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Tournament not found",
-                        detail: "No tournament found for the given pin");
-                }
+                var tournament = await tournamentService.SingleTournamentByPinAsync(pin, loadMatches: true);
 
-                var matches = await uow.Matches.GetByTournamentAsync(tournament.Id);
+                var matches = tournament.Matches;
                 return Results.Ok(matches.Select(MatchEndpoints.ToDto).ToList());
             })
             .WithName("GetPublicBracketMatches")

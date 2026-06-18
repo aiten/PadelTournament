@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Base.Persistence.Contracts;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -80,25 +82,18 @@ public static class MatchEndpoints
             .WithTags("Matches")
             .RequireAuthorization(Settings.AdminPolicyName);
 
-        routeRead.MapGet("", async (int tournamentId, IUnitOfWork uow) =>
+        routeRead.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
             {
-                var matches = await uow.Matches.GetByTournamentAsync(tournamentId);
-                return Results.Ok(matches.Select(ToDto).ToList());
+                var tournament = await tournamentService.SingleTournamentAsync(tournamentId, nameof(Tournament.Matches));
+                return Results.Ok(tournament.Matches.Select(ToDto).ToList());
             })
             .WithName("GetMatches")
             .Produces<List<MatchDto>>(StatusCodes.Status200OK);
 
-        routeRead.MapGet("/{id:int}",  async (int tournamentId, int id, IUnitOfWork uow) =>
+        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, IMatchService matchService) =>
             {
-                var entity = await uow.Matches.GetByIdAsync(id);
-
-                if (entity is null || entity.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {id} in tournament {tournamentId}");
-                }
+                var entity = await matchService.SingleMatchAsync(id);
+                EndpointTools.CheckTournamentId(tournamentId, entity.TournamentId);
 
                 return Results.Ok(ToDto(entity));
             })
@@ -106,25 +101,12 @@ public static class MatchEndpoints
             .Produces<MatchDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, MatchDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPost("", async (int tournamentId, MatchDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                if (dto.Id != 0)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The ID in the request body must be 0");
-                }
+                EndpointTools.CheckIdMustBe0(dto.Id);
+                EndpointTools.CheckTournamentId(tournamentId, dto.TournamentId);
 
-                if (dto.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Invalid request",
-                        detail: "The TournamentId in the body does not match the URL");
-                }
-
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
                 var entity = new Match
                 {
@@ -138,33 +120,24 @@ public static class MatchEndpoints
                     Remark       = dto.Remark
                 };
 
-                await uow.Matches.AddAsync(entity);
-                await trans.CommitTransactionAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentMatchUpdatedAsync(pin);
+                await matchService.AddMatchAsync(entity);
 
                 int id = entity.Id;
                 return Results.Created(
                     $"{baseRoute}/{tournamentId}/matches/{id}",
-                    ToDto(await uow.Matches.GetByIdAsync(id)));
+                    ToDto(await matchService.GetMatchByIdAsync(id)));
             })
             .WithValidation<MatchDto>()
             .WithName("AddMatch")
             .Produces<MatchDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                var entity = await uow.Matches.GetByIdAsync(id);
-                if (entity is null || entity.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {id} in tournament {tournamentId}");
-                }
+                var entity = await matchService.SingleMatchAsync(id);
+                EndpointTools.CheckTournamentId(tournamentId, entity.TournamentId);
 
                 entity.TeamAId     = dto.TeamAId;
                 entity.TeamBId     = dto.TeamBId;
@@ -173,9 +146,8 @@ public static class MatchEndpoints
                 entity.Result      = EntityResult(dto.Result);
                 entity.Remark      = dto.Remark;
 
+                //TODO : Validate the entity before saving changes, Notify the clients about the changes, etc.
                 await trans.CommitTransactionAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 return Results.NoContent();
             })
@@ -185,16 +157,10 @@ public static class MatchEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}/winner", async (int tournamentId, int id, SetWinnerDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPut("/{id:int}/winner", async (int tournamentId, int id, SetWinnerDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                var match = await uow.Matches.GetByIdAsync(id);
-                if (match is null || match.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {id} in tournament {tournamentId}");
-                }
+                var match = await matchService.SingleMatchAsync(id);
+                EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
 
                 var winner = EntityResult(dto.Winner);
 
@@ -206,22 +172,9 @@ public static class MatchEndpoints
                         detail: "Winner must be 'WonA' or 'WonB'");
                 }
 
-                try
-                {
-                    using var trans = await uow.BeginTransactionAsync();
-                    await uow.Matches.SetWinnerAsync(id, winner.Value);
-                    await trans.CommitTransactionAsync();
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Cannot set winner",
-                        detail: ex.Message);
-                }
-
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentMatchUpdatedAsync(pin);
+                using var trans = await transactionProvider.BeginTransactionAsync();
+                await matchService.SetWinnerAsync(id, winner.Value);
+                await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })
@@ -229,7 +182,6 @@ public static class MatchEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
-
     }
 
     private static MatchResult? EntityResult(string? result)

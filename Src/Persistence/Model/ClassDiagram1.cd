@@ -1,21 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="Core.Entities.Tournament">
+  <Class Name="Persistence.Model.Tournament">
     <Position X="5" Y="2.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AhAACAAAAACgAAAAABAAAAAAAAAIAAQAAAAAAAAAAAA=</HashCode>
-      <FileName>Entities\Tournament.cs</FileName>
+      <FileName>Model\Tournament.cs</FileName>
     </TypeIdentifier>
     <ShowAsCollectionAssociation>
       <Property Name="Teams" />
       <Property Name="Matches" />
     </ShowAsCollectionAssociation>
   </Class>
-  <Class Name="Core.Entities.Match">
+  <Class Name="Persistence.Model.Match">
     <Position X="11" Y="3" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AgAAQAAAAiQAABAAAgAAIAQAACAEAAAAAAAAAAIAAQA=</HashCode>
-      <FileName>Entities\Match.cs</FileName>
+      <FileName>Model\Match.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="TeamA" />
@@ -24,11 +24,11 @@
       <Property Name="Tournament" />
     </ShowAsAssociation>
   </Class>
-  <Class Name="Core.Entities.Team">
+  <Class Name="Persistence.Model.Team">
     <Position X="8" Y="1.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>CgAAAAAAAAAAAAAAAAAAAAQAAQAEAAABAAAAAAAAAAA=</HashCode>
-      <FileName>Entities\Team.cs</FileName>
+      <FileName>Model\Team.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="Tournament" />

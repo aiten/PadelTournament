@@ -23,8 +23,6 @@ public interface IMatchRepository : IGenericRepository<Match>
 
     Task SetWinnerAsync(int matchId, MatchResult winner);
 
-    Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result);
-
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
     Task UpdateMatchResultAsync(int matchId, MatchResultOverview result);

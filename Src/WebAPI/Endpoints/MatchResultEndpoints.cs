@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Base.Persistence.Contracts;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -105,44 +107,29 @@ public static class MatchResultEndpoints
             .WithTags("MatchResults")
             .RequireAuthorization(Settings.AdminPolicyName);
 
-        routeRead.MapGet("", async (int tournamentId, int matchId, IUnitOfWork uow) =>
+        routeRead.MapGet("", async (int tournamentId, int matchId, IMatchService matchService) =>
             {
-                var match = await uow.Matches.GetByIdAsync(matchId);
+                var match = await matchService.SingleMatchAsync(matchId);
+                EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
 
-                if (match is null || match.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {matchId} in tournament {tournamentId}");
-                }
-
-                return Results.Ok(ToDto(await uow.Matches.GetMatchResultAsync(matchId)));
+                return Results.Ok(ToDto(await matchService.GetMatchResultAsync(matchId)));
             })
             .WithName("GetMatchResult")
             .Produces<MatchResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeAdmin.MapPut("", async (int tournamentId, int matchId, MatchResultDto dto, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapPut("", async (int tournamentId, int matchId, MatchResultDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                var match = await uow.Matches.GetByIdAsync(matchId);
+                var match = await matchService.SingleMatchAsync(matchId);
+                EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
 
-                if (match is null || match.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {matchId} in tournament {tournamentId}");
-                }
-
-                using var trans = await uow.BeginTransactionAsync();
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
                 var result = ToEntity(dto);
-                await uow.Matches.UpdateMatchResultAsync(matchId, result!);
+                await matchService.UpdateMatchResultAsync(matchId, result!);
                 await trans.CommitTransactionAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentMatchUpdatedAsync(pin);
+
 
                 return Results.NoContent();
             })
@@ -150,23 +137,16 @@ public static class MatchResultEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapDelete("", async (int tournamentId, int matchId, IUnitOfWork uow, IHubNotificationService hub) =>
+        routeAdmin.MapDelete("", async (int tournamentId, int matchId, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
-                var match = await uow.Matches.GetByIdAsync(matchId, nameof(Match.Sets));
+                var match = await matchService.SingleMatchAsync(matchId);
+                EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
 
-                if (match is null || match.TournamentId != tournamentId)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        title: "Match not found",
-                        detail: $"No match found with ID {matchId} in tournament {tournamentId}");
-                }
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                using var trans = await uow.BeginTransactionAsync();
-                match.Sets.Clear();
+                await matchService.DeleteMatchResultAsync(matchId);
+
                 await trans.CommitTransactionAsync();
-                var pin = (await uow.Tournaments.GetByIdAsync(tournamentId))?.RegistrationPin ?? 0;
-                await hub.NotifyTournamentMatchUpdatedAsync(pin);
 
                 return Results.NoContent();
             })

@@ -15,8 +15,6 @@ using Persistence.QueryResult;
 
 using Service;
 
-using Shared.Exceptions;
-
 using WebAPI.Filters;
 
 public record TournamentDto(
@@ -83,38 +81,36 @@ public static class TournamentEndpoints
         var routeAdmin = app
             .MapGroup(baseRoute)
             .WithTags("Tournament")
-            .RequireAuthorization(Settings.AdminPolicyName);
+            .RequireAuthorization(Settings.AdminPolicyName)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
-        route.MapGet("", async (ITournamentService service) =>
+        route.MapGet("", async (ITournamentService tournamentService) =>
             {
-                var dtos = await service.GetTournamentOverviewsAsync();
+                var dtos = await tournamentService.GetTournamentOverviewsAsync();
                 return Results.Ok(dtos);
             })
             .WithName("GetTournaments")
             .Produces<List<TournamentOverview>>(StatusCodes.Status200OK);
 
 
-        route.MapGet("/{id:int}", async (int id, ITournamentService service) =>
+        route.MapGet("/{id:int}", async (int id, ITournamentService tournamentService) =>
             {
-                var dto = ToDto(await service.SingleAsync(id));
+                var dto = ToDto(await tournamentService.SingleTournamentAsync(id));
                 return Results.Ok(dto);
             })
             .WithName("GetTournament")
             .Produces<TournamentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPut("/{id:int}", async (int id, TournamentDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
+        routeAdmin.MapPut("/{id:int}", async (int id, TournamentDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
             {
-                if (id != dto.Id)
-                {
-                    throw new IllegalValuesException("The ID in the URL does not match the ID in the request body");
-                }
+                EndpointTools.CheckId(id, dto.Id);
 
-                using (var trans = await transactionProvider.BeginTransactionAsync())
-                {
-                    await service.UpdateTournamentAsync(id, ToEntity(dto));
-                    await trans.CommitTransactionAsync();
-                }
+                using var trans = await transactionProvider.BeginTransactionAsync();
+
+                await tournamentService.UpdateTournamentAsync(id, ToEntity(dto));
+                await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })
@@ -127,20 +123,16 @@ public static class TournamentEndpoints
 
         routeAdmin.MapPost("", async (TournamentDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
-                if (dto.Id != 0)
-                {
-                    throw new IllegalValuesException("The ID in the request body must be 0");
-                }
+                EndpointTools.CheckIdMustBe0(dto.Id);
 
-                using (var trans = await transactionProvider.BeginTransactionAsync())
-                {
-                    var entity  = ToEntity(dto);
-                    var created = await service.AddTournamentAsync(entity);
+                using var trans = await transactionProvider.BeginTransactionAsync();
 
-                    await trans.CommitTransactionAsync();
+                var entity  = ToEntity(dto);
+                var created = await service.AddTournamentAsync(entity);
 
-                    return Results.Created($"{baseRoute}/{created.Id}", ToDto(created));
-                }
+                await trans.CommitTransactionAsync();
+
+                return Results.Created($"{baseRoute}/{created.Id}", ToDto(created));
             })
             .WithValidation<TournamentDto>()
             .WithName("AddTournament")
@@ -149,11 +141,10 @@ public static class TournamentEndpoints
 
         routeAdmin.MapDelete("/{id:int}", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
-                using (var trans = await transactionProvider.BeginTransactionAsync())
-                {
-                    await service.DeleteTournamentAsync(id);
-                    await trans.CommitTransactionAsync();
-                }
+                using var trans = await transactionProvider.BeginTransactionAsync();
+
+                await service.DeleteTournamentAsync(id);
+                await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })

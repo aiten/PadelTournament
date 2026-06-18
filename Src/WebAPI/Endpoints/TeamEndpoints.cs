@@ -14,8 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Shared.Exceptions;
-
 using WebAPI.Filters;
 
 public record TeamDto(
@@ -66,23 +64,22 @@ public static class TeamEndpoints
         var routeAdmin = app
             .MapGroup($"{baseRoute}/{{tournamentId:int}}/teams")
             .WithTags("Teams")
-            .RequireAuthorization(Settings.AdminPolicyName);
+            .RequireAuthorization(Settings.AdminPolicyName)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
-        routeRead.MapGet("", async (int tournamentId, ITournamentService service) =>
+        routeRead.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
             {
-                var tournament = await service.SingleAsync(tournamentId, nameof(Tournament.Teams));
+                var tournament = await tournamentService.SingleTournamentAsync(tournamentId, nameof(Tournament.Teams));
                 return Results.Ok(tournament.Teams.Select(ToDto).ToList());
             })
             .WithName("GetTeams")
             .Produces<List<TeamDto>>(StatusCodes.Status200OK);
 
-        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, ITeamService service) =>
+        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, ITeamService teamService) =>
             {
-                var entity = await service.SingleAsync(id);
-                if (entity.TournamentId != tournamentId)
-                {
-                    throw new NotFoundException($"No team found with ID {id} in tournament {tournamentId}");
-                }
+                var entity = await teamService.SingleTeamAsync(id);
+                EndpointTools.CheckTournamentId(tournamentId, entity.TournamentId);
 
                 return Results.Ok(ToDto(entity));
             })
@@ -90,29 +87,22 @@ public static class TeamEndpoints
             .Produces<TeamDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, ITournamentService service, ITeamService teamService, ITransactionProvider transactionProvider) =>
+        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, ITournamentService tournamentService, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
-                if (dto.Id != 0)
-                {
-                    throw new IllegalValuesException("The ID in the request body must be 0");
-                }
-
-                if (dto.TournamentId != tournamentId)
-                {
-                    throw new IllegalValuesException("The TournamentId in the body does not match the URL");
-                }
+                EndpointTools.CheckIdMustBe0(dto.Id);
+                EndpointTools.CheckTournamentId(tournamentId, dto.TournamentId);
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
 
-                var teamName = dto.Player2 is null ? dto.Player1 : $"{dto.Player1}/{dto.Player2}";
-                var entity   = await service.RegisterTeamAsync(tournamentId, teamName, dto.Seed, dto.StartMatchPos);
+                var teamName = string.IsNullOrEmpty(dto.Player2) ? dto.Player1 : $"{dto.Player1}/{dto.Player2}";
+                var entity   = await tournamentService.RegisterTeamAsync(tournamentId, teamName, dto.Seed, dto.StartMatchPos);
 
                 await trans.CommitTransactionAsync();
 
                 int id = entity.Id;
                 return Results.Created(
                     $"{baseRoute}/{tournamentId}/teams/{id}",
-                    ToDto(await teamService.GetByIdAsync(id)));
+                    ToDto(await teamService.GetTeamByIdAsync(id)));
             })
             .WithValidation<TeamDto>()
             .WithName("AddTeam")
@@ -121,19 +111,12 @@ public static class TeamEndpoints
 
         routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
-                if (id != dto.Id)
-                {
-                    throw new IllegalValuesException("The ID in the URL does not match the ID in the request body");
-                }
-
-                if (dto.TournamentId != tournamentId)
-                {
-                    throw new IllegalValuesException("The TournamentId in the body does not match the URL");
-                }
+                EndpointTools.CheckId(id, dto.Id);
+                EndpointTools.CheckTournamentId(tournamentId, dto.TournamentId);
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
 
-                await teamService.UpdateAsync(id, tournamentId, dto.Player1, dto.Player2, dto.Seed, dto.StartMatchPos);
+                await teamService.UpdateTeamAsync(id, tournamentId, dto.Player1, dto.Player2, dto.Seed, dto.StartMatchPos);
 
                 await trans.CommitTransactionAsync();
 
@@ -156,9 +139,10 @@ public static class TeamEndpoints
             })
             .WithName("DeleteTeam")
             .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
+        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
             {
                 var entries = dto.TeamsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Select(raw =>
@@ -173,8 +157,8 @@ public static class TeamEndpoints
                     .ToList();
 
                 using var trans      = await transactionProvider.BeginTransactionAsync();
-                var       teams      = await service.RegisterTeamsAsync(tournamentId, entries);
-                var       tournament = await service.GetByIdAsync(tournamentId);
+                var       teams      = await tournamentService.RegisterTeamsAsync(tournamentId, entries);
+                var       tournament = await tournamentService.GetTournamentByIdAsync(tournamentId);
 
                 await trans.CommitTransactionAsync();
 

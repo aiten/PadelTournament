@@ -17,9 +17,9 @@ public interface ITournamentService
 {
     Task<IList<TournamentOverview>> GetTournamentOverviewsAsync();
 
-    Task<Tournament?> GetByIdAsync(int id, params string[] includeProperties);
+    Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties);
 
-    Task<Tournament> SingleAsync(int id, params string[] includeProperties);
+    Task<Tournament> SingleTournamentAsync(int id, params string[] includeProperties);
 
     Task UpdateTournamentAsync(int id, Tournament tournament);
 
@@ -37,6 +37,7 @@ public interface ITournamentService
 
     Task<IList<Team>> RegisterTeamsAsync(int tournamentId, IList<(string Name, int? Seed, int? StartMatchPos)> teams);
 
+    Task<Tournament> SingleTournamentByPinAsync(int pin, bool loadTeams = false, bool loadMatches = false);
 }
 
 public class TournamentService : ITournamentService
@@ -59,15 +60,15 @@ public class TournamentService : ITournamentService
         return await _uow.Tournaments.GetTournamentOverviewsAsync();
     }
 
-    public async Task<Tournament?> GetByIdAsync(int id, params string[] includeProperties)
+    public async Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties)
     {
         var entity = await _uow.Tournaments.GetByIdAsync(id, includeProperties);
         return entity;
     }
 
-    public async Task<Tournament> SingleAsync(int id, params string[] includeProperties)
+    public async Task<Tournament> SingleTournamentAsync(int id, params string[] includeProperties)
     {
-        return (await GetByIdAsync(id, includeProperties)) ?? throw new NotFoundException($"Tournament {id} not found");
+        return (await GetTournamentByIdAsync(id, includeProperties)) ?? throw new NotFoundException($"Tournament {id} not found");
     }
 
     public async Task UpdateTournamentAsync(int id, Tournament tournament)
@@ -153,7 +154,7 @@ public class TournamentService : ITournamentService
         await _uow.SaveChangesAsync();
 
         await _hub.NotifyTournamentUpdatedAsync(tournament.Id);
-        await _hub.NotifyTournamentMatchUpdatedAsync(tournament.RegistrationPin??1);
+        await _hub.NotifyTournamentMatchUpdatedAsync(tournament.RegistrationPin ?? 1);
 
         return tournament;
     }
@@ -346,7 +347,7 @@ public class TournamentService : ITournamentService
 
     public async Task DeleteMatchScheduleAsync(int tournamentId)
     {
-        var entity = await SingleAsync(tournamentId, nameof(Tournament.Matches));
+        var entity = await SingleTournamentAsync(tournamentId, nameof(Tournament.Matches));
         _uow.Matches.RemoveRange(entity.Matches);
     }
 
@@ -356,7 +357,7 @@ public class TournamentService : ITournamentService
 
     public async Task<Team> RegisterTeamAsync(int tournamentId, string name, int? seed, int? startMatchPos)
     {
-        var tournament = await SingleAsync(tournamentId);
+        var tournament = await SingleTournamentAsync(tournamentId);
         return await RegisterTeamAsync(tournament, name, seed, startMatchPos, true);
     }
 
@@ -377,9 +378,9 @@ public class TournamentService : ITournamentService
             throw new InvalidTournamentDataException($"Tournament '{name}' is already started");
 
         var slashIdx = name.IndexOf('/');
-        var player1 = slashIdx >= 0 ? name[..slashIdx].Trim() : name.Trim();
-        var p2Raw = slashIdx >= 0 ? name[(slashIdx + 1)..].Trim() : null;
-        var player2 = p2Raw is { Length: > 0 } ? p2Raw : null;
+        var player1  = slashIdx >= 0 ? name[..slashIdx].Trim() : name.Trim();
+        var p2Raw    = slashIdx >= 0 ? name[(slashIdx + 1)..].Trim() : null;
+        var player2  = p2Raw is { Length: > 0 } ? p2Raw : null;
 
         bool alreadyRegistered = await _uow.Teams.AnyPlayerAsync(tournament.Id, player1, player2);
         if (alreadyRegistered)
@@ -387,11 +388,11 @@ public class TournamentService : ITournamentService
 
         var registration = new Team
         {
-            Player1 = player1,
-            Player2 = player2,
+            Player1          = player1,
+            Player2          = player2,
             RegistrationCode = await GenerateUniqueRegistrationCodeAsync(tournament.Id),
             RegistrationDate = DateTime.Now,
-            Tournament = tournament
+            Tournament       = tournament
         };
 
         await _uow.Teams.AddAsync(registration);
@@ -407,12 +408,12 @@ public class TournamentService : ITournamentService
 
     public async Task<IList<Team>> RegisterTeamsAsync(int tournamentId, IList<(string Name, int? Seed, int? StartMatchPos)> teams)
     {
-        var tournament = await SingleAsync(tournamentId);
+        var tournament = await SingleTournamentAsync(tournamentId);
 
         var result = new List<Team>();
         foreach (var (name, seed, startMatchPos) in teams)
         {
-            var team = await RegisterTeamAsync(tournament, name,seed,startMatchPos, false);
+            var team = await RegisterTeamAsync(tournament, name, seed, startMatchPos, false);
             result.Add(team);
         }
 
@@ -433,6 +434,10 @@ public class TournamentService : ITournamentService
         return code;
     }
 
+    public async Task<Tournament> SingleTournamentByPinAsync(int pin, bool loadTeams = false, bool loadMatches = false)
+    {
+        return await _uow.Tournaments.GetByPinAsync(pin, loadTeams, loadMatches) ?? throw new NotFoundException($"No Tournament found with Pin {pin}");
+    }
 
     #endregion
 }

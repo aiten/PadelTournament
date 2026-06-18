@@ -25,28 +25,18 @@ public static class RegistrationEndpoints
             .WithTags("Registration");
         // NO Auth required .RequireAuthorization(Settings.AdminPolicyName);
 
-        route.MapPost("", async (TeamRegistrationDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
+        route.MapPost("", async (TeamRegistrationDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
             {
-                try
-                {
-                    using var trans        = await transactionProvider.BeginTransactionAsync();
-                    var       registration = await service.RegisterTeamByPinAsync(dto.Name, dto.Pin);
+                using var trans        = await transactionProvider.BeginTransactionAsync();
+                var       registration = await tournamentService.RegisterTeamByPinAsync(dto.Name, dto.Pin);
 
-                    await trans.CommitTransactionAsync();
+                await trans.CommitTransactionAsync();
 
-                    return Results.Created($"/api/public/{dto.Pin}/{registration.RegistrationCode}",
-                        new TeamRegistrationResultDto(
-                            registration.Name,
-                            dto.Pin,
-                            registration.RegistrationCode!));
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return Results.Problem(
-                        statusCode: StatusCodes.Status400BadRequest,
-                        title: "Registration failed",
-                        detail: ex.Message);
-                }
+                return Results.Created($"/api/public/{dto.Pin}/{registration.RegistrationCode}",
+                    new TeamRegistrationResultDto(
+                        registration.Name,
+                        dto.Pin,
+                        registration.RegistrationCode!));
             })
             .WithValidation<TeamRegistrationDto>()
             .WithName("RegisterForTournament")
