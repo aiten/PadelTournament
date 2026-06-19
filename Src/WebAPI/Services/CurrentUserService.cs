@@ -20,6 +20,8 @@ public class CurrentUserService : ICurrentUserService
 
     public bool IsAdmin =>
         _httpContextAccessor.HttpContext?.User.IsInRole(Settings.KeycloakAdminRoleName) ?? false;
+    public bool IsUser =>
+        _httpContextAccessor.HttpContext?.User.IsInRole(Settings.KeycloakUserRoleName) ?? false;
 
     public async Task<int?> GetUserIdAsync()
     {

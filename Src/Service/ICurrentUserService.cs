@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 
 public interface ICurrentUserService
 {
-    bool       IsAdmin { get; }
+    bool IsUser { get; }
+    bool IsAdmin { get; }
+ 
     Task<int?> GetUserIdAsync();
 }
