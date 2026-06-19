@@ -3,6 +3,7 @@ namespace WebAPI.Services;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
 using Persistence;
@@ -11,31 +12,37 @@ using Service;
 
 public class CurrentUserService : ICurrentUserService
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ApplicationDbContext _dbContext;
+    private readonly IHttpContextAccessor  _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly ApplicationDbContext  _dbContext;
 
-    public CurrentUserService(IHttpContextAccessor httpContextAccessor, ApplicationDbContext dbContext)
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, ApplicationDbContext dbContext)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _dbContext           = dbContext;
+        _httpContextAccessor  = httpContextAccessor;
+        _authorizationService = authorizationService;
+        _dbContext            = dbContext;
     }
 
-    public bool IsAdmin =>
-        _httpContextAccessor.HttpContext?.User.IsInRole(Settings.KeycloakAdminRoleName) ?? false;
-    public bool IsUser =>
-        _httpContextAccessor.HttpContext?.User.IsInRole(Settings.KeycloakUserRoleName) ?? false;
-
-    public async Task<string?> GetUserIdAsync()
+    public async Task<bool> IsAdminAsync()
     {
-        var sub = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        // remark: asp.net automatically maps "sub" to ClaimTypes.NameIdentifier
-        // 
-        if (sub is null)
-        {
-            // not in context
-            return null;
-        }
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user == null) return false;
+        var result = await _authorizationService.AuthorizeAsync(user, null, Settings.AdminPolicyName);
+        return result.Succeeded;
+    }
 
-        return sub;
+    public async Task<bool> IsUserAsync()
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user == null) return false;
+        var result = await _authorizationService.AuthorizeAsync(user, null, Settings.UserPolicyName);
+        return result.Succeeded;
+    }
+
+    public Task<string?> GetUserIdAsync()
+    {
+        // asp.net automatically maps "sub" to ClaimTypes.NameIdentifier
+        var sub = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Task.FromResult(sub);
     }
 }

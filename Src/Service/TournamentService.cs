@@ -57,13 +57,13 @@ public class TournamentService : ITournamentService
 
     public async Task<IList<TournamentOverview>> GetTournamentOverviewsAsync()
     {
-        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+        var userId = await _currentUserService.IsAdminAsync() ? null : await _currentUserService.GetUserIdAsync();
         return await _uow.Tournaments.GetTournamentOverviewsAsync(userId);
     }
 
     public async Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties)
     {
-        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+        var userId = await _currentUserService.IsAdminAsync() ? null : await _currentUserService.GetUserIdAsync();
         var tournament = await _uow.Tournaments.GetByIdAsync(id, includeProperties);
 
         if (tournament is not null && userId is not null)

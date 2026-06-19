@@ -45,7 +45,7 @@ public class TeamService : ITeamService
     public async Task<Team?> GetTeamByIdAsync(int id, params string[] includeProperties)
     {
         var entity = await _uow.Teams.GetByIdAsync(id, includeProperties);
-        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+        var userId = await _currentUserService.IsAdminAsync() ? null : await _currentUserService.GetUserIdAsync();
 
         if (entity is not null && userId is not null)
         {

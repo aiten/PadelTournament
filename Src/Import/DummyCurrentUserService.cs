@@ -6,9 +6,8 @@ using Service;
 
 public class DummyCurrentUserService : ICurrentUserService
 {
+    public Task<bool> IsAdminAsync() => Task.FromResult(true);
+    public Task<bool> IsUserAsync()  => Task.FromResult(true);
 
-    public bool IsAdmin => true;
-    public bool IsUser  => true;
-
-    public async Task<string?> GetUserIdAsync() => "user@xyz.com";
+    public Task<string?> GetUserIdAsync() => Task.FromResult<string?>("user@xyz.com");
 }
