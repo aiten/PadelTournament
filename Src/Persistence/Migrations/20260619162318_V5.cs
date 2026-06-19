@@ -46,8 +46,8 @@ namespace Persistence.Migrations
                 unique: true);
 
             migrationBuilder.Sql(@"
-                UPDATE Tournament
-                SET RegistrationCode = RegistrationCode + '00'
+                UPDATE Tournaments
+                SET RegistrationPin = RegistrationPin + '00'
             ");
 
         }
