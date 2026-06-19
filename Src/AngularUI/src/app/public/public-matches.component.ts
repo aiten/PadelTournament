@@ -114,7 +114,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
 
   pin       = 0;
   code      = '';
-  private teamNames   = new Map<number, string>();
+  private teamNames   = signal(new Map<number, string>());
   private signalRSub?: Subscription;
 
   constructor(
@@ -154,7 +154,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
           next: ({ matches, allTeams, tournament }) => {
             this.matches.set(matches);
             this.tournament.set(tournament);
-            this.teamNames = new Map(allTeams.map(t => [t.id, t.name]));
+            this.teamNames.set(new Map(allTeams.map(t => [t.id, t.name])));
             this.loading.set(false);
           },
           error: err => { this.error.set(err.error?.detail ?? 'Failed to load matches.'); this.loading.set(false); }
@@ -201,7 +201,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
 
   teamLabel(id: number | null): string {
     if (id === null) return 'TBD';
-    return this.teamNames.get(id) ?? `Team #${id}`;
+    return this.teamNames().get(id) ?? `Team #${id}`;
   }
 
   formatTime(start: string | null): string {
