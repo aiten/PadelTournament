@@ -5,7 +5,7 @@
 
     <a routerLink="/public" class="action-item" routerLinkActive="active">Public</a>
 
-    <a routerLink="/tournaments" class="action-item" *kaHasRoles="[roles.admin]">Tournaments</a>
+    <a routerLink="/tournaments" class="action-item" *kaHasRoles="[roles.user]">Tournaments</a>
     <a routerLink="/profile" class="action-item" *kaHasRoles="[roles.viewProfile]">Profile</a>
     <div class="dropdown" *kaHasRoles="[roles.admin]">
       <span class="action-item dropdown-toggle">Admin</span>

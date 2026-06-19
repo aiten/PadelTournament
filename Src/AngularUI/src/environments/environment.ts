@@ -1,7 +1,7 @@
 export const environment = {
   roles: {
-    admin: 'myAdminRole',
-    user: 'myUserRole',
+    admin: 'adminRole',
+    user: 'userRole',
     viewProfile: 'view-profile',
   }
 };

@@ -15,9 +15,9 @@ const localhostCondition = createInterceptorCondition<IncludeBearerTokenConditio
 export const provideKeycloakAngular = () =>
   provideKeycloak({
     config: {
-      realm: 'myTest',
+      realm: 'padel',
       url: 'https://auth.aitenbichler.cc',
-      clientId: 'myTestUI'
+      clientId: 'padel'
     },
     initOptions: {
       onLoad: 'check-sso',
