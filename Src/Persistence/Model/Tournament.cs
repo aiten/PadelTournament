@@ -20,6 +20,8 @@ public class Tournament : EntityObject
     [Range(100, 999)]
     public int? RegistrationPin { get; set; }
 
+    public string? UserId { get; set; }
+
     public DateTime  Created  { get; set; }
     public DateTime? Modified { get; set; } = null;
 

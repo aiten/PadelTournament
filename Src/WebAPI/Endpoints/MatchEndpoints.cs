@@ -70,7 +70,7 @@ public static class MatchEndpoints
 
     public static void MapMatchEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
-        var routeRead = app
+        var routeUser = app
             .MapGroup($"{baseRoute}/{{tournamentId:int}}/matches")
             .WithTags("Matches")
             .RequireAuthorization(Settings.AdminOrUserPolicyName)
@@ -82,7 +82,7 @@ public static class MatchEndpoints
             .WithTags("Matches")
             .RequireAuthorization(Settings.AdminPolicyName);
 
-        routeRead.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
+        routeUser.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
             {
                 var tournament = await tournamentService.SingleTournamentAsync(tournamentId, nameof(Tournament.Matches));
                 return Results.Ok(tournament.Matches.Select(ToDto).ToList());
@@ -90,7 +90,7 @@ public static class MatchEndpoints
             .WithName("GetMatches")
             .Produces<List<MatchDto>>(StatusCodes.Status200OK);
 
-        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, IMatchService matchService) =>
+        routeUser.MapGet("/{id:int}", async (int tournamentId, int id, IMatchService matchService) =>
             {
                 var entity = await matchService.SingleMatchAsync(id);
                 EndpointTools.CheckTournamentId(tournamentId, entity.TournamentId);
@@ -101,7 +101,7 @@ public static class MatchEndpoints
             .Produces<MatchDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPut("/{id:int}", async (int tournamentId, int id, MatchModifyDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
                 using var trans = await transactionProvider.BeginTransactionAsync();
 
@@ -126,7 +126,7 @@ public static class MatchEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}/winner", async (int tournamentId, int id, SetWinnerDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPut("/{id:int}/winner", async (int tournamentId, int id, SetWinnerDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
                 var match = await matchService.SingleMatchAsync(id);
                 EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);

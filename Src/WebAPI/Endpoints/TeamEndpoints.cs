@@ -54,7 +54,7 @@ public static class TeamEndpoints
 
     public static void MapTeamEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
-        var routeRead = app
+        var routeUser = app
             .MapGroup($"{baseRoute}/{{tournamentId:int}}/teams")
             .WithTags("Teams")
             .RequireAuthorization(Settings.AdminOrUserPolicyName)
@@ -68,7 +68,7 @@ public static class TeamEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
-        routeRead.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
+        routeUser.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
             {
                 var tournament = await tournamentService.SingleTournamentAsync(tournamentId, nameof(Tournament.Teams));
                 return Results.Ok(tournament.Teams.Select(ToDto).ToList());
@@ -76,7 +76,7 @@ public static class TeamEndpoints
             .WithName("GetTeams")
             .Produces<List<TeamDto>>(StatusCodes.Status200OK);
 
-        routeRead.MapGet("/{id:int}", async (int tournamentId, int id, ITeamService teamService) =>
+        routeUser.MapGet("/{id:int}", async (int tournamentId, int id, ITeamService teamService) =>
             {
                 var entity = await teamService.SingleTeamAsync(id);
                 EndpointTools.CheckTournamentId(tournamentId, entity.TournamentId);
@@ -87,7 +87,7 @@ public static class TeamEndpoints
             .Produces<TeamDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPost("", async (int tournamentId, TeamDto dto, ITournamentService tournamentService, ITeamService teamService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPost("", async (int tournamentId, TeamDto dto, ITournamentService tournamentService, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
                 EndpointTools.CheckIdMustBe0(dto.Id);
                 EndpointTools.CheckTournamentId(tournamentId, dto.TournamentId);
@@ -109,7 +109,7 @@ public static class TeamEndpoints
             .Produces<TeamDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, ITeamService teamService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPut("/{id:int}", async (int tournamentId, int id, TeamDto dto, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
                 EndpointTools.CheckId(id, dto.Id);
                 EndpointTools.CheckTournamentId(tournamentId, dto.TournamentId);
@@ -127,7 +127,7 @@ public static class TeamEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapDelete("/{id:int}", async (int tournamentId, int id, ITeamService teamService, ITransactionProvider transactionProvider) =>
+        routeUser.MapDelete("/{id:int}", async (int tournamentId, int id, ITeamService teamService, ITransactionProvider transactionProvider) =>
             {
                 using var trans = await transactionProvider.BeginTransactionAsync();
 
@@ -142,7 +142,7 @@ public static class TeamEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPost("/bulk", async (int tournamentId, RegisterTeamsBulkDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
             {
                 var entries = dto.TeamsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Select(raw =>
@@ -158,12 +158,12 @@ public static class TeamEndpoints
 
                 using var trans      = await transactionProvider.BeginTransactionAsync();
                 var       teams      = await tournamentService.RegisterTeamsAsync(tournamentId, entries);
-                var       tournament = await tournamentService.GetTournamentByIdAsync(tournamentId);
+                var       tournament = await tournamentService.SingleTournamentAsync(tournamentId);
 
                 await trans.CommitTransactionAsync();
 
                 return Results.Ok(teams
-                    .Select(t => new TeamRegistrationResultDto(t.Name, tournament?.RegistrationPin ?? 0, t.RegistrationCode!))
+                    .Select(t => new TeamRegistrationResultDto(t.Name, tournament.RegistrationPin ?? 0, t.RegistrationCode!))
                     .ToList());
             })
             .WithName("RegisterTeamsBulk")

@@ -94,7 +94,7 @@ public static class MatchResultEndpoints
 
     public static void MapMatchResultEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
-        var routeRead = app
+        var routeUser = app
             .MapGroup($"{baseRoute}/{{tournamentId:int}}/matches/{{matchId:int}}/result")
             .WithTags("MatchResults")
             .RequireAuthorization(Settings.AdminOrUserPolicyName)
@@ -106,7 +106,7 @@ public static class MatchResultEndpoints
             .WithTags("MatchResults")
             .RequireAuthorization(Settings.AdminPolicyName);
 
-        routeRead.MapGet("", async (int tournamentId, int matchId, IMatchService matchService) =>
+        routeUser.MapGet("", async (int tournamentId, int matchId, IMatchService matchService) =>
             {
                 var match = await matchService.SingleMatchAsync(matchId);
                 EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
@@ -118,7 +118,7 @@ public static class MatchResultEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeAdmin.MapPut("", async (int tournamentId, int matchId, MatchResultDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPut("", async (int tournamentId, int matchId, MatchResultDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
                 var match = await matchService.SingleMatchAsync(matchId);
                 EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
@@ -136,7 +136,7 @@ public static class MatchResultEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapDelete("", async (int tournamentId, int matchId, IMatchService matchService, ITransactionProvider transactionProvider) =>
+        routeUser.MapDelete("", async (int tournamentId, int matchId, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
                 var match = await matchService.SingleMatchAsync(matchId);
                 EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);

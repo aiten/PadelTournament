@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Http;
 
 using Persistence;
 
+using Service;
+
 public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -23,18 +25,17 @@ public class CurrentUserService : ICurrentUserService
     public bool IsUser =>
         _httpContextAccessor.HttpContext?.User.IsInRole(Settings.KeycloakUserRoleName) ?? false;
 
-    public async Task<int?> GetUserIdAsync()
+    public async Task<string?> GetUserIdAsync()
     {
-        var sub = _httpContextAccessor.HttpContext?.User.FindFirstValue("sub");
+        var sub = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        // remark: asp.net automatically maps "sub" to ClaimTypes.NameIdentifier
+        // 
         if (sub is null)
+        {
+            // not in context
             return null;
-        /*
-                var teacher = await _dbContext.Teachers
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.KeycloakUserId == sub);
+        }
 
-                return teacher?.Id;
-        */
-        return null;
+        return sub;
     }
 }

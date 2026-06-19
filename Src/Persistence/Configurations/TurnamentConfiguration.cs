@@ -16,5 +16,6 @@ public class TournamentConfiguration : IEntityTypeConfiguration<Tournament>
         builder.Property(j => j.RowVersion).IsRowVersion();
 
         builder.Property(j => j.Description).AsRequiredText(200);
+        builder.Property(j => j.UserId).HasMaxLength(256);
     }
 }

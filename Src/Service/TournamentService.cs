@@ -17,8 +17,6 @@ public interface ITournamentService
 {
     Task<IList<TournamentOverview>> GetTournamentOverviewsAsync();
 
-    Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties);
-
     Task<Tournament> SingleTournamentAsync(int id, params string[] includeProperties);
 
     Task UpdateTournamentAsync(int id, Tournament tournament);
@@ -45,24 +43,36 @@ public class TournamentService : ITournamentService
     private readonly IUnitOfWork                _uow;
     private readonly ILogger<TournamentService> _logger;
     private readonly IHubNotificationService    _hub;
+    private readonly ICurrentUserService          _currentUserService;
 
-    public TournamentService(IUnitOfWork uow, ILogger<TournamentService> logger, IHubNotificationService hub)
+    public TournamentService(IUnitOfWork uow, ILogger<TournamentService> logger, IHubNotificationService hub, ICurrentUserService currentUserService)
     {
         _uow    = uow;
         _logger = logger;
         _hub    = hub;
+        _currentUserService = currentUserService;
     }
 
     #region REST
 
     public async Task<IList<TournamentOverview>> GetTournamentOverviewsAsync()
     {
-        return await _uow.Tournaments.GetTournamentOverviewsAsync();
+        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+        return await _uow.Tournaments.GetTournamentOverviewsAsync(userId);
     }
 
     public async Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties)
     {
-        return await _uow.Tournaments.GetByIdAsync(id, includeProperties);
+        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+        var tournament = await _uow.Tournaments.GetByIdAsync(id, includeProperties);
+
+        if (tournament is not null && userId is not null)
+        {
+            // check if tournament belongs to user (expect admin)
+            tournament = tournament.UserId == userId ? tournament : null;
+        }
+
+        return tournament;
     }
 
     public async Task<Tournament> SingleTournamentAsync(int id, params string[] includeProperties)
@@ -93,6 +103,7 @@ public class TournamentService : ITournamentService
 
         tournament.Created  = DateTime.Now;
         tournament.Modified = null;
+        tournament.UserId   = await _currentUserService.GetUserIdAsync();
 
         await _uow.Tournaments.AddAsync(tournament);
         await _uow.SaveChangesAsync();

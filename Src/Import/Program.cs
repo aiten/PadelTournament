@@ -35,6 +35,7 @@ builder.Services
     .AddAssemblyIncludingInternals(name => name.EndsWith("Service"),    ServiceLifetime.Transient, typeof(TournamentService).Assembly);
 ;
 
+builder.Services.AddScoped<ICurrentUserService, DummyCurrentUserService>();
 builder.Services.AddSingleton<IHubNotificationService, DummyHubNotificationService>();
 
 var host = builder.Build();
@@ -44,7 +45,7 @@ Console.WriteLine("Migrate Database");
 using (var scope = host.Services.CreateScope())
 {
     var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-    await uow.DeleteDatabaseAsync();
+    //await uow.DeleteDatabaseAsync();
     //await uow.CreateDatabaseAsync();
     await uow.MigrateDatabaseAsync();
 }

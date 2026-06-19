@@ -71,7 +71,7 @@ public static class TournamentEndpoints
 
     public static void MapTournamentEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
-        var route = app
+        var routeUser = app
             .MapGroup(baseRoute)
             .WithTags("Tournament")
             .RequireAuthorization(Settings.AdminOrUserPolicyName)
@@ -85,7 +85,7 @@ public static class TournamentEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
-        route.MapGet("", async (ITournamentService tournamentService) =>
+        routeUser.MapGet("", async (ITournamentService tournamentService) =>
             {
                 var dtos = await tournamentService.GetTournamentOverviewsAsync();
                 return Results.Ok(dtos);
@@ -94,7 +94,7 @@ public static class TournamentEndpoints
             .Produces<List<TournamentOverview>>(StatusCodes.Status200OK);
 
 
-        route.MapGet("/{id:int}", async (int id, ITournamentService tournamentService) =>
+        routeUser.MapGet("/{id:int}", async (int id, ITournamentService tournamentService) =>
             {
                 var dto = ToDto(await tournamentService.SingleTournamentAsync(id));
                 return Results.Ok(dto);
@@ -103,7 +103,7 @@ public static class TournamentEndpoints
             .Produces<TournamentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapPut("/{id:int}", async (int id, TournamentDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
+        routeUser.MapPut("/{id:int}", async (int id, TournamentDto dto, ITournamentService tournamentService, ITransactionProvider transactionProvider) =>
             {
                 EndpointTools.CheckId(id, dto.Id);
 
@@ -121,7 +121,7 @@ public static class TournamentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeAdmin.MapPost("", async (TournamentDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
+        routeUser.MapPost("", async (TournamentDto dto, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 EndpointTools.CheckIdMustBe0(dto.Id);
 
@@ -139,7 +139,7 @@ public static class TournamentEndpoints
             .Produces(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeAdmin.MapDelete("/{id:int}", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
+        routeUser.MapDelete("/{id:int}", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 using var trans = await transactionProvider.BeginTransactionAsync();
 
@@ -153,7 +153,7 @@ public static class TournamentEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status204NoContent);
 
-        routeAdmin.MapPost("/{id:int}/generate-schedule", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
+        routeUser.MapPost("/{id:int}/generate-schedule", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 using var trans = await transactionProvider.BeginTransactionAsync();
 
@@ -168,7 +168,7 @@ public static class TournamentEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeAdmin.MapDelete("/{id:int}/revert-schedule", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
+        routeUser.MapDelete("/{id:int}/revert-schedule", async (int id, ITournamentService service, ITransactionProvider transactionProvider) =>
             {
                 using var trans = await transactionProvider.BeginTransactionAsync();
 

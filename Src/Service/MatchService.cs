@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 public interface IMatchService
 {
-    Task<Match?> GetMatchByIdAsync(int id, params string[] includeProperties);
     Task<Match>  SingleMatchAsync(int  id, params string[] includeProperties);
 
     Task<Match> SingleMatchForTeamAsync(int matchId, int teamId, params string[] includeProperties);
@@ -32,20 +31,30 @@ public class MatchService : IMatchService
 {
     private readonly IUnitOfWork             _uow;
     private readonly ILogger<MatchService>   _logger;
+    private readonly ICurrentUserService     _currentUserService;
     private readonly IHubNotificationService _hub;
 
-    public MatchService(IUnitOfWork uow, ILogger<MatchService> logger, IHubNotificationService hub)
+    public MatchService(IUnitOfWork uow, ILogger<MatchService> logger, ICurrentUserService currentUserService, IHubNotificationService hub)
     {
-        _uow    = uow;
-        _logger = logger;
-        _hub    = hub;
+        _uow                = uow;
+        _logger             = logger;
+        _currentUserService = currentUserService;
+        _hub                = hub;
     }
 
     #region REST
 
-    public async Task<Match?> GetMatchByIdAsync(int id, params string[] includeProperties)
+    private async Task<Match?> GetMatchByIdAsync(int id, params string[] includeProperties)
     {
         var entity = await _uow.Matches.GetByIdAsync(id, includeProperties);
+        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+
+        if (entity is not null && userId is not null)
+        {
+            // check if tournament belongs to user (expect admin)
+            entity = await _uow.Tournaments.BelongsToUserAsync(entity.TournamentId, userId) ? entity : null;
+        }
+
         return entity;
     }
 
@@ -120,7 +129,6 @@ public class MatchService : IMatchService
 
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
-
     }
 
     public async Task SetWinnerAsync(int matchId, MatchResult winner)

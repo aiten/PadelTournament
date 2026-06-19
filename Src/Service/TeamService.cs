@@ -30,12 +30,14 @@ public class TeamService : ITeamService
     private readonly IUnitOfWork             _uow;
     private readonly ILogger<TeamService>    _logger;
     private readonly IHubNotificationService _hub;
+    private readonly ICurrentUserService     _currentUserService;
 
-    public TeamService(IUnitOfWork uow, ILogger<TeamService> logger, IHubNotificationService hub)
+    public TeamService(IUnitOfWork uow, ILogger<TeamService> logger, ICurrentUserService currentUserService, IHubNotificationService hub)
     {
-        _uow    = uow;
-        _logger = logger;
-        _hub    = hub;
+        _uow                = uow;
+        _logger             = logger;
+        _currentUserService = currentUserService;
+        _hub                = hub;
     }
 
     #region REST
@@ -43,6 +45,13 @@ public class TeamService : ITeamService
     public async Task<Team?> GetTeamByIdAsync(int id, params string[] includeProperties)
     {
         var entity = await _uow.Teams.GetByIdAsync(id, includeProperties);
+        var userId = _currentUserService.IsAdmin ? null : await _currentUserService.GetUserIdAsync();
+
+        if (entity is not null && userId is not null)
+        {
+            // check if tournament belongs to user (expect admin)
+            entity = await _uow.Tournaments.BelongsToUserAsync(entity.TournamentId,userId) ? entity : null;
+        }
         return entity;
     }
 
@@ -54,6 +63,7 @@ public class TeamService : ITeamService
     private async Task<Team> CheckTeamAsync(int id, int tournamentId, params string[] includeProperties)
     {
         var entity = await SingleTeamAsync(id, includeProperties);
+
         if (entity.TournamentId != tournamentId)
         {
             throw new NotFoundException($"Team {id} not found in tournament {tournamentId}");
