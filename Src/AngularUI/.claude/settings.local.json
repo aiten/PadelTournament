@@ -18,7 +18,9 @@
       "Bash(npm install *)",
       "Bash(Get-ChildItem -Path \"p:\\\\Schule\\\\CSharp\\\\Beispiele.CSharp4\\\\WebAPI\\\\PadelTournament\\\\Solution\\\\AngularUI\\\\src\\\\app\" -Recurse -Include \"*team*.html\", \"*tournament*.html\")",
       "Bash(cd /p/Schule/CSharp/Beispiele.CSharp4/WebAPI/PadelTournament/Solution/AngularUI/src/app && find . -type f -name \"*team*\" -o -name \"*tournament*\" | head -30)",
-      "Read(//p/p/Schule/CSharp/Beispiele.CSharp4/WebAPI/PadelTournament/Solution/AngularUI/src/**)"
+      "Read(//p/p/Schule/CSharp/Beispiele.CSharp4/WebAPI/PadelTournament/Solution/AngularUI/src/**)",
+      "Skill(run)",
+      "Skill(run:*)"
     ]
   }
 }

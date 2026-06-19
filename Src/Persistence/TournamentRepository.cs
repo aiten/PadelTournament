@@ -19,7 +19,9 @@ public interface ITournamentRepository : IGenericRepository<Tournament>
 
     Task<Tournament?> GetByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false);
 
-    Task<bool> BelongsToUserAsync(int id, string? userId);
+    Task<bool> BelongsToUserAsync(int         id, string? userId);
+    
+    Task<bool> AnyRegistrationPinAsync(string pin);
 }
 
 public class TournamentRepository : GenericRepository<Tournament>, ITournamentRepository
@@ -41,6 +43,7 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
         {
             query = query.Where(t => t.UserId == userId);
         }
+
         return await query
             .Select(t => new TournamentOverview(
                 t.Id,
@@ -65,7 +68,6 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
         return await _dbContext.Tournaments
             .AsNoTracking()
             .AnyAsync(t => t.Id == id && t.UserId == userId);
-
     }
 
     public async Task<Tournament?> GetByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
@@ -84,9 +86,8 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<bool> AnyRegistrationPinAsync(int id, string pin)
+    public async Task<bool> AnyRegistrationPinAsync(string pin)
     {
         return await DbSet.AnyAsync(t => t.RegistrationPin == pin);
     }
-
 }

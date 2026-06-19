@@ -18,6 +18,8 @@ using Persistence.Model;
 
 using Service;
 
+using Shared.Exceptions;
+
 var builder = Host.CreateApplicationBuilder(args);
 
 
@@ -45,17 +47,21 @@ Console.WriteLine("Migrate Database");
 using (var scope = host.Services.CreateScope())
 {
     var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-    await uow.DeleteDatabaseAsync();
-    await uow.CreateDatabaseAsync();
-    //await uow.MigrateDatabaseAsync();
+    //await uow.DeleteDatabaseAsync();
+    //await uow.CreateDatabaseAsync();
+    await uow.MigrateDatabaseAsync();
 }
 
 Console.WriteLine("Import Data");
 
-using (var scope = host.Services.CreateScope())
+bool doImport = false;
+
+if (doImport)
 {
-    var uow     = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-    var service = scope.ServiceProvider.GetRequiredService<ITournamentService>();
+    using (var scope = host.Services.CreateScope())
+    {
+        var uow     = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var service = scope.ServiceProvider.GetRequiredService<ITournamentService>();
 /*
         var classesCsv = await new CsvImport<ClassesCsv>().ReadAsync("ImportData/Classes2025.csv");
 
@@ -63,50 +69,51 @@ using (var scope = host.Services.CreateScope())
         await uow.Classes.AddRangeAsync(classes);
     */
 
-    var tournaments = new[]
-    {
-        new Tournament()
+        var tournaments = new[]
         {
-            Created         = DateTime.Now,
-            Description     = "Test Tournament I",
-            From            = new DateOnly(2025, 9, 18),
-            To              = null,
-            RegistrationPin = "12345"
-        },
-        new Tournament()
+            new Tournament()
+            {
+                Created         = DateTime.Now,
+                Description     = "Test Tournament I",
+                From            = new DateOnly(2025, 9, 18),
+                To              = null,
+                RegistrationPin = "12345"
+            },
+            new Tournament()
+            {
+                Created         = DateTime.Now,
+                Description     = "Test Tournament II",
+                From            = new DateOnly(2026, 5, 16),
+                To              = new DateOnly(2026, 5, 20),
+                RegistrationPin = "32100"
+            }
+        };
+        await uow.Tournaments.AddRangeAsync(tournaments);
+
+        await uow.SaveChangesAsync();
+
+        for (int i = 1; i < 30; i++)
         {
-            Created         = DateTime.Now,
-            Description     = "Test Tournament II",
-            From            = new DateOnly(2026, 5, 16),
-            To              = new DateOnly(2026, 5, 20),
-            RegistrationPin = "32100"
+            await service.RegisterTeamByPinAsync($"Team {i}", "32100");
         }
-    };
-    await uow.Tournaments.AddRangeAsync(tournaments);
 
-    await uow.SaveChangesAsync();
+        var entries = (await File.ReadAllLinesAsync("ImportData/Bibione202509.txt"))
+            .Select(raw =>
+            {
+                var  parts = raw.Split(';');
+                var  name  = parts[0].Trim();
+                int? seed  = parts.Length > 1 && int.TryParse(parts[1].Trim(), out var s1) ? s1 : null;
+                int? pos   = parts.Length > 2 && int.TryParse(parts[2].Trim(), out var s2) ? s2 : null;
 
-    for (int i = 1; i < 30; i++)
-    {
-        await service.RegisterTeamByPinAsync($"Team {i}", "32100");
+                return (Name: name, Seed: seed, SrateMatchPos: pos);
+            })
+            .ToList();
+
+
+        await service.RegisterTeamsAsync(tournaments[0].Id, entries);
+
+        await uow.SaveChangesAsync();
     }
 
-    var entries = (await File.ReadAllLinesAsync("ImportData/Bibione202509.txt"))
-        .Select(raw =>
-        {
-            var  parts = raw.Split(';');
-            var  name  = parts[0].Trim();
-            int? seed  = parts.Length > 1 && int.TryParse(parts[1].Trim(), out var s1) ? s1 : null;
-            int? pos   = parts.Length > 2 && int.TryParse(parts[2].Trim(), out var s2) ? s2 : null;
-
-            return (Name: name, Seed: seed, SrateMatchPos: pos);
-        })
-        .ToList();
-
-
-    await service.RegisterTeamsAsync(tournaments[0].Id, entries);
-
-    await uow.SaveChangesAsync();
+    Console.WriteLine("done");
 }
-
-Console.WriteLine("done");

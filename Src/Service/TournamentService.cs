@@ -101,9 +101,10 @@ public class TournamentService : ITournamentService
             throw new IllegalValuesException("Id must be 0 for new entities");
         }
 
-        tournament.Created  = DateTime.Now;
-        tournament.Modified = null;
-        tournament.UserId   = await _currentUserService.GetUserIdAsync();
+        tournament.Created         = DateTime.Now;
+        tournament.Modified        = null;
+        tournament.UserId          = await _currentUserService.GetUserIdAsync();
+        tournament.RegistrationPin = string.IsNullOrEmpty(tournament.RegistrationPin) ? await GenerateUniqueRegistrationPinAsync() : tournament.RegistrationPin;
 
         await _uow.Tournaments.AddAsync(tournament);
         await _uow.SaveChangesAsync();
@@ -349,6 +350,19 @@ public class TournamentService : ITournamentService
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(entity.RegistrationPin);
     }
+
+    private async Task<string> GenerateUniqueRegistrationPinAsync()
+    {
+        var    rng = Random.Shared;
+        string code;
+        do
+        {
+            code = rng.Next(10000, 100000).ToString();
+        } while (await _uow.Tournaments.AnyRegistrationPinAsync(code));
+
+        return code;
+    }
+
 
     #endregion
 
