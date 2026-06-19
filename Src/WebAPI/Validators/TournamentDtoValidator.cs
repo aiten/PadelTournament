@@ -13,8 +13,8 @@ public class TournamentDtoValidator : AbstractValidator<TournamentDto>
             .WithMessage("Description must not be empty.");
 
         RuleFor(x => x.RegistrationPin)
-            .InclusiveBetween(100, 999)
-            .When(x => x.RegistrationPin.HasValue)
-            .WithMessage("Pin must be between 100 and 999.");
+            .Length(5, 5)
+            .Matches("^[0-9]{5}$")
+            .WithMessage("Pin must be a 5-digit number.");
     }
 }

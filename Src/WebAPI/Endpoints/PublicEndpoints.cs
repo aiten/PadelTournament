@@ -24,15 +24,15 @@ public static class PublicEndpoints
     public static void MapPublicEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
         var routeTeam = app
-            .MapGroup($"{baseRoute}/{{pin:int}}/{{registrationCode}}")
+            .MapGroup($"{baseRoute}/{{pin}}/{{registrationCode}}")
             .WithTags("Public");
         // No authentication required
 
         var routeTournament = app
-            .MapGroup($"{baseRoute}/{{pin:int}}")
+            .MapGroup($"{baseRoute}/{{pin}}")
             .WithTags("Public");
 
-        routeTeam.MapGet("/team", async (int pin, string registrationCode, ITeamService teamService) =>
+        routeTeam.MapGet("/team", async (string pin, string registrationCode, ITeamService teamService) =>
             {
                 var team = await teamService.SingleByRegistrationAsync(pin, registrationCode);
 
@@ -51,7 +51,7 @@ public static class PublicEndpoints
             .Produces<TeamDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeTeam.MapGet("/matches", async (int pin, string registrationCode, ITeamService teamService) =>
+        routeTeam.MapGet("/matches", async (string pin, string registrationCode, ITeamService teamService) =>
             {
                 var team    = await teamService.SingleByRegistrationAsync(pin, registrationCode);
                 var matches = await teamService.GetMatchesByTeamIdAsync(team.Id);
@@ -62,7 +62,7 @@ public static class PublicEndpoints
             .Produces<List<MatchDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeTeam.MapPut("/matches/{matchId:int}/result", async (int pin, string registrationCode, int matchId, PublicMatchResultDto dto, ITeamService teamService, IMatchService matchService, ITransactionProvider transactionProvider) =>
+        routeTeam.MapPut("/matches/{matchId:int}/result", async (string pin, string registrationCode, int matchId, PublicMatchResultDto dto, ITeamService teamService, IMatchService matchService, ITransactionProvider transactionProvider) =>
             {
                 var team  = await teamService.SingleByRegistrationAsync(pin, registrationCode);
                 var match = await matchService.SingleMatchForTeamAsync(matchId, team.Id);
@@ -83,7 +83,7 @@ public static class PublicEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        routeTournament.MapGet("", async (int pin, ITournamentService tournamentService) =>
+        routeTournament.MapGet("", async (string pin, ITournamentService tournamentService) =>
             {
                 var tournament = TournamentEndpoints.ToDto(await tournamentService.SingleTournamentByPinAsync(pin));
                 return Results.Ok(tournament);
@@ -93,7 +93,7 @@ public static class PublicEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
 
-        routeTournament.MapGet("/teams", async (int pin, ITournamentService tournamentService) =>
+        routeTournament.MapGet("/teams", async (string pin, ITournamentService tournamentService) =>
             {
                 var tournament = await tournamentService.SingleTournamentByPinAsync(pin, loadTeams: true);
 
@@ -113,7 +113,7 @@ public static class PublicEndpoints
             .Produces<List<TeamDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        routeTournament.MapGet("/matches", async (int pin, ITournamentService tournamentService) =>
+        routeTournament.MapGet("/matches", async (string pin, ITournamentService tournamentService) =>
             {
                 var tournament = await tournamentService.SingleTournamentByPinAsync(pin, loadMatches: true);
 

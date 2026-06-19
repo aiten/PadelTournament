@@ -95,7 +95,7 @@ public class MatchService : IMatchService
         var match = await _uow.Matches.UpdateMatchResultAsync(matchId, result);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
     }
 
     public async Task DeleteMatchResultAsync(int id)
@@ -103,7 +103,7 @@ public class MatchService : IMatchService
         var entity = await SingleMatchAsync(id, nameof(Match.Sets), nameof(Match.Tournament));
         entity.Sets.Clear();
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin);
     }
 
     #endregion
@@ -128,7 +128,7 @@ public class MatchService : IMatchService
         }
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
     }
 
     public async Task SetWinnerAsync(int matchId, MatchResult winner)
@@ -138,7 +138,7 @@ public class MatchService : IMatchService
         await SetWinnerAsync(match, winner);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
     }
 
     private async Task SetWinnerAsync(Match match, MatchResult winner)

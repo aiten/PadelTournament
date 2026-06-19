@@ -163,7 +163,7 @@ public static class TeamEndpoints
                 await trans.CommitTransactionAsync();
 
                 return Results.Ok(teams
-                    .Select(t => new TeamRegistrationResultDto(t.Name, tournament.RegistrationPin ?? 0, t.RegistrationCode!))
+                    .Select(t => new TeamRegistrationResultDto(t.Name, tournament.RegistrationPin, t.RegistrationCode!))
                     .ToList());
             })
             .WithName("RegisterTeamsBulk")

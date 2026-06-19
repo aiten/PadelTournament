@@ -5,7 +5,7 @@ using System;
 public record TournamentOverview(
     int       Id,
     string    Description,
-    int?      RegistrationPin,
+    string    RegistrationPin,
     DateOnly  From,
     DateOnly? To,
     int       Teams,

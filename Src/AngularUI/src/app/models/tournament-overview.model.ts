@@ -3,7 +3,7 @@ export interface TournamentOverview {
   description: string;
   from: string;
   to: string | null;
-  registrationPin?: number | null;
+  registrationPin?: string | null;
   teams: number;
   matches: number;
   finishedMatches: number;

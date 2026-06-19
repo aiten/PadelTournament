@@ -17,8 +17,7 @@ public class Tournament : EntityObject
     [TournamentRange]
     public DateOnly? To { get; set; }
 
-    [Range(100, 999)]
-    public int? RegistrationPin { get; set; }
+    public required string RegistrationPin { get; set; }
 
     public string? UserId { get; set; }
 

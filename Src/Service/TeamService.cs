@@ -20,7 +20,7 @@ public interface ITeamService
 
     Task DeleteTeamAsync(int id, int tournamentId);
 
-    Task<Team> SingleByRegistrationAsync(int pin, string registrationCode);
+    Task<Team> SingleByRegistrationAsync(string pin, string registrationCode);
 
     Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId);
 }
@@ -81,7 +81,7 @@ public class TeamService : ITeamService
         ApplySeedOrStartMatchPos(entity, seed, startMatchPos);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentTeamUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentTeamUpdatedAsync(entity.Tournament.RegistrationPin);
     }
 
     public async Task DeleteTeamAsync(int id, int tournamentId)
@@ -90,7 +90,7 @@ public class TeamService : ITeamService
         _uow.Teams.Remove(entity);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentTeamUpdatedAsync(entity.Tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentTeamUpdatedAsync(entity.Tournament.RegistrationPin);
     }
 
     private static void ApplySeedOrStartMatchPos(Team entity, int? seed, int? startMatchPos)
@@ -109,7 +109,7 @@ public class TeamService : ITeamService
 
     #endregion
 
-    public async Task<Team> SingleByRegistrationAsync(int pin, string registrationCode)
+    public async Task<Team> SingleByRegistrationAsync(string pin, string registrationCode)
     {
         var team = await _uow.Teams.GetByRegistrationAsync(pin, registrationCode);
         return team ?? throw new NotFoundException("No team found for the given pin and registration code");

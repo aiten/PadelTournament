@@ -13,7 +13,7 @@ using Persistence.Model;
 
 public interface ITeamRepository : IGenericRepository<Team>
 {
-    Task<Team?> GetByRegistrationAsync(int pin, string registrationCode);
+    Task<Team?> GetByRegistrationAsync(string pin, string registrationCode);
 
     Task<bool> AnyPlayerAsync(int           tournamentId, string player1, string? player2);
     Task<bool> AnyRegistrationCodeAsync(int tournamentId, string code);
@@ -28,7 +28,7 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Team?> GetByRegistrationAsync(int pin, string registrationCode)
+    public async Task<Team?> GetByRegistrationAsync(string pin, string registrationCode)
     {
         return await DbSet
             .AsNoTracking()

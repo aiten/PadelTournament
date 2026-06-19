@@ -105,7 +105,7 @@ export class TournamentListComponent implements OnInit {
         case 'description':    cmp = a.description.localeCompare(b.description, undefined, { sensitivity: 'base' }); break;
         case 'from':           cmp = (a.from ?? '').localeCompare(b.from ?? ''); break;
         case 'to':             cmp = (a.to ?? '').localeCompare(b.to ?? ''); break;
-        case 'registrationPin': cmp = (a.registrationPin ?? 0) - (b.registrationPin ?? 0); break;
+        case 'registrationPin': cmp = (a.registrationPin ?? '').localeCompare(b.registrationPin ?? ''); break;
         case 'teams':          cmp = a.teams - b.teams; break;
         case 'finishedMatches': cmp = a.finishedMatches - b.finishedMatches; break;
         default:               cmp = 0;

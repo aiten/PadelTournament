@@ -22,7 +22,7 @@ public record TournamentDto(
     string    Description,
     DateOnly  From,
     DateOnly? To,
-    int?      RegistrationPin
+    string    RegistrationPin
 );
 
 public static class TournamentEndpoints

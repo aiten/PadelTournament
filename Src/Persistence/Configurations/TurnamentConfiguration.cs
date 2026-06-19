@@ -15,6 +15,9 @@ public class TournamentConfiguration : IEntityTypeConfiguration<Tournament>
 
         builder.Property(j => j.RowVersion).IsRowVersion();
 
+        builder.HasIndex(t => t.RegistrationPin).IsUnique();
+
+        builder.Property(j => j.RegistrationPin).AsRequiredText(5);
         builder.Property(j => j.Description).AsRequiredText(200);
         builder.Property(j => j.UserId).HasMaxLength(256);
     }

@@ -14,8 +14,8 @@ import { toCanvas } from 'qrcode';
       <form class="form">
         <div class="form-group">
           <label>Tournament PIN *</label>
-          <input type="number" name="pin" [(ngModel)]="pin" (ngModelChange)="renderQr()" required class="form-control"
-                 placeholder="e.g. 123" />
+          <input type="text" name="pin" [(ngModel)]="pin" (ngModelChange)="renderQr()" required class="form-control"
+                 placeholder="e.g. 12345" maxlength="5" pattern="[0-9]{5}" />
         </div>
         <div class="form-group">
           <label>Registration Code <span style="font-weight:400;color:#64748b">(optional — for your team's matches)</span></label>
@@ -42,19 +42,19 @@ import { toCanvas } from 'qrcode';
   `
 })
 export class PublicEntryComponent implements AfterViewInit {
-  pin: number | null = null;
+  pin = '';
   code = '';
   error = signal('');
 
   @ViewChild('qrCanvas') qrCanvas!: ElementRef<HTMLCanvasElement>;
 
   constructor(private router: Router, private globalState: GlobalStateService) {
-    if (globalState.lastPin)  this.pin  = globalState.lastPin;
+    if (globalState.lastPin) this.pin = globalState.lastPin;
     if (globalState.lastCode) this.code = globalState.lastCode;
   }
 
   private saveState(): void {
-    this.globalState.lastPin  = this.pin ?? 0;
+    this.globalState.lastPin  = this.pin;
     this.globalState.lastCode = this.code.trim();
   }
 

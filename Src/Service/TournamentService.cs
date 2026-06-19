@@ -31,11 +31,11 @@ public interface ITournamentService
 
     Task<Team> RegisterTeamAsync(int tournamentId, string name, int? seed, int? startMatchPos);
 
-    Task<Team> RegisterTeamByPinAsync(string name, int pin);
+    Task<Team> RegisterTeamByPinAsync(string name, string pin);
 
     Task<IList<Team>> RegisterTeamsAsync(int tournamentId, IList<(string Name, int? Seed, int? StartMatchPos)> teams);
 
-    Task<Tournament> SingleTournamentByPinAsync(int pin, bool loadTeams = false, bool loadMatches = false);
+    Task<Tournament> SingleTournamentByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false);
 }
 
 public class TournamentService : ITournamentService
@@ -150,7 +150,7 @@ public class TournamentService : ITournamentService
         await _uow.SaveChangesAsync();
 
         await _hub.NotifyTournamentUpdatedAsync(tournament.Id);
-        await _hub.NotifyTournamentMatchUpdatedAsync(tournament.RegistrationPin ?? 1);
+        await _hub.NotifyTournamentMatchUpdatedAsync(tournament.RegistrationPin);
 
         return tournament;
     }
@@ -347,7 +347,7 @@ public class TournamentService : ITournamentService
         _uow.Matches.RemoveRange(entity.Matches);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(entity.RegistrationPin ?? 1);
+        await _hub.NotifyTournamentMatchUpdatedAsync(entity.RegistrationPin);
     }
 
     #endregion
@@ -360,7 +360,7 @@ public class TournamentService : ITournamentService
         return await RegisterTeamAsync(tournament, name, seed, startMatchPos, true);
     }
 
-    public async Task<Team> RegisterTeamByPinAsync(string name, int pin)
+    public async Task<Team> RegisterTeamByPinAsync(string name, string pin)
     {
         var tournament = await _uow.Tournaments.GetByPinAsync(pin) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
 
@@ -399,7 +399,7 @@ public class TournamentService : ITournamentService
 
         if (notify)
         {
-            await _hub.NotifyTournamentTeamUpdatedAsync(tournament.RegistrationPin ?? 0);
+            await _hub.NotifyTournamentTeamUpdatedAsync(tournament.RegistrationPin);
         }
 
         return registration;
@@ -416,7 +416,7 @@ public class TournamentService : ITournamentService
             result.Add(team);
         }
 
-        await _hub.NotifyTournamentTeamUpdatedAsync(tournament.RegistrationPin ?? 0);
+        await _hub.NotifyTournamentTeamUpdatedAsync(tournament.RegistrationPin);
 
         return result;
     }
@@ -433,7 +433,7 @@ public class TournamentService : ITournamentService
         return code;
     }
 
-    public async Task<Tournament> SingleTournamentByPinAsync(int pin, bool loadTeams = false, bool loadMatches = false)
+    public async Task<Tournament> SingleTournamentByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
     {
         return await _uow.Tournaments.GetByPinAsync(pin, loadTeams, loadMatches) ?? throw new NotFoundException($"No Tournament found with Pin {pin}");
     }

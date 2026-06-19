@@ -28,8 +28,8 @@ import { TournamentService } from '../services/tournament.service';
           <p class="error">End date must be after start date.</p>
         }
         <div class="form-group">
-          <label>PIN (100–999)</label>
-          <input type="number" name="registrationPin" [(ngModel)]="tournament().registrationPin" min="100" max="999" class="form-control" />
+          <label>PIN</label>
+          <input type="text" name="registrationPin" [(ngModel)]="tournament().registrationPin" maxlength="5" pattern="[0-9]{5}" class="form-control" />
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" [disabled]="form.invalid || (tournament().from && tournament().to && tournament().from > tournament().to!)">Save</button>

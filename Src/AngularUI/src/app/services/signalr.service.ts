@@ -17,22 +17,22 @@ export class PublicSignalRService implements OnDestroy {
       .withAutomaticReconnect()
       .build();
 
-    this.connection.on('TournamentMatchUpdated', (pin: number) =>
+    this.connection.on('TournamentMatchUpdated', (pin: string) =>
       this.tournamentMatchUpdated$.next({ pin }),
     );
 
-    this.connection.on('TournamentTeamUpdated', (pin: number) =>
+    this.connection.on('TournamentTeamUpdated', (pin: string) =>
       this.tournamentTeamUpdated$.next({ pin }),
     );
 
     this.ready = this.connection.start();
   }
 
-  joinTournamentGroup(pin: number): Promise<void> {
+  joinTournamentGroup(pin: string): Promise<void> {
     return this.ready.then(() => this.connection.invoke('JoinTournamentGroup', pin));
   }
 
-  leaveTournamentGroup(pin: number): Promise<void> {
+  leaveTournamentGroup(pin: string): Promise<void> {
     return this.ready.then(() => this.connection.invoke('LeaveTournamentGroup', pin));
   }
 

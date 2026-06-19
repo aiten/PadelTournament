@@ -176,6 +176,7 @@ namespace Persistence.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("RegistrationCode")
+                        .IsRequired()
                         .HasMaxLength(5)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(5)");
@@ -198,6 +199,9 @@ namespace Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TournamentId", "RegistrationCode")
+                        .IsUnique();
 
                     b.HasIndex("TournamentId", "Player1", "Player2")
                         .IsUnique()
@@ -229,8 +233,11 @@ namespace Persistence.Migrations
                     b.Property<DateTime?>("Modified")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("RegistrationPin")
-                        .HasColumnType("int");
+                    b.Property<string>("RegistrationPin")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(5)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -245,6 +252,9 @@ namespace Persistence.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RegistrationPin")
+                        .IsUnique();
 
                     b.ToTable("Tournaments");
                 });

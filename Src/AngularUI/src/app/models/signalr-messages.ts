@@ -3,9 +3,9 @@ export interface TournamentUpdatedMessage {
 }
 
 export interface TournamentMatchUpdatedMessage {
-  pin: number;
+  pin: string;
 }
 
 export interface TournamentTeamUpdatedMessage {
-  pin: number;
+  pin: string;
 }

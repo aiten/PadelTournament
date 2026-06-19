@@ -13,9 +13,9 @@ public class Team : EntityObject
 
     public DateTime RegistrationDate { get; set; }
 
-    public int?    Seed             { get; set; }
-    public int?    StartMatchPos    { get; set; }
-    public string? RegistrationCode { get; set; }
+    public          int?   Seed             { get; set; }
+    public          int?   StartMatchPos    { get; set; }
+    public required string RegistrationCode { get; set; }
 
     public Tournament Tournament   { get; set; } = null!;
     public int        TournamentId { get; set; }

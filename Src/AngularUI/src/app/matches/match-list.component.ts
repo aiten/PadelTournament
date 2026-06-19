@@ -90,7 +90,7 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
 })
 export class MatchListComponent implements OnInit, OnDestroy {
   tournamentId = 0;
-  tournamentPin = 0;
+  tournamentPin = '';
   matches = signal<Match[]>([]);
   teams = signal<Team[]>([]);
   loading = signal(false);
@@ -130,7 +130,7 @@ export class MatchListComponent implements OnInit, OnDestroy {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
     this.tournamentService.getById(this.tournamentId).subscribe({
       next: tournament => {
-        this.tournamentPin = tournament.registrationPin ?? 0;
+        this.tournamentPin = tournament.registrationPin ?? '';
         this.signalR.joinTournamentGroup(this.tournamentPin);
       }
     });

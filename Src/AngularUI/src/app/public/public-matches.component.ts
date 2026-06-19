@@ -112,7 +112,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
   error       = signal('');
   reportError = signal('');
 
-  pin       = 0;
+  pin       = '';
   code      = '';
   private teamNames   = signal(new Map<number, string>());
   private signalRSub?: Subscription;
@@ -124,7 +124,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.pin  = +this.route.snapshot.paramMap.get('pin')!;
+    this.pin  = this.route.snapshot.paramMap.get('pin')!;
     this.code = this.route.snapshot.paramMap.get('code')!;
     this.load();
 

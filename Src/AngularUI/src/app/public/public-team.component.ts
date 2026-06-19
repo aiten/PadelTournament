@@ -60,7 +60,7 @@ import { Team } from '../models/team.model';
   `
 })
 export class PublicTeamComponent implements OnInit {
-  pin        = 0;
+  pin        = '';
   code       = '';
   tournament = signal<Tournament | null>(null);
   team       = signal<Team | null>(null);
@@ -73,7 +73,7 @@ export class PublicTeamComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.pin  = +this.route.snapshot.paramMap.get('pin')!;
+    this.pin  = this.route.snapshot.paramMap.get('pin')!;
     this.code =  this.route.snapshot.paramMap.get('code')!;
     this.globalState.lastPin  = this.pin;
     this.globalState.lastCode = this.code;

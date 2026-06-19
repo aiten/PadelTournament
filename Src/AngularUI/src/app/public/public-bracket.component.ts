@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { GlobalStateService } from '../services/global-state.service';
 import { Match } from '../models/match.model';
 import { Team } from '../models/team.model';
@@ -100,8 +100,9 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   teams   = signal<Team[]>([]);
   loading = signal(true);
   error   = signal('');
+  teamNames = computed(() => new Map(this.teams().map(t => [t.id, t.name])));
 
-  private pin = 0;
+  private pin = '';
   private signalRSub?: Subscription;
 
   constructor(
@@ -121,20 +122,22 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.pin = +this.route.snapshot.paramMap.get('pin')!;
-
-    this.publicService.getTeams(this.pin).subscribe({
-      next: teams => this.teams.set(teams),
-      error: () => {}
-    });
-    this.loadMatches();
+    this.pin = this.route.snapshot.paramMap.get('pin')!;
 
     this.signalR.joinTournamentGroup(this.pin);
-    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(msg => {
+    this.signalRSub = new Subscription();
+    this.signalRSub.add(this.signalR.tournamentMatchUpdated$.subscribe(msg => {
       if (msg.pin === this.pin) {
-        this.loadMatches();
+        this.reloadData();
       }
-    });
+    }));
+    this.signalRSub.add(this.signalR.tournamentTeamUpdated$.subscribe(msg => {
+      if (msg.pin === this.pin) {
+        this.reloadData();
+      }
+    }));
+
+    this.reloadData();
   }
 
   ngOnDestroy(): void {
@@ -142,10 +145,23 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
     this.signalRSub?.unsubscribe();
   }
 
-  private loadMatches(): void {
-    this.publicService.getMatches(this.pin).subscribe({
-      next: matches => { this.matches.set(matches); this.loading.set(false); },
-      error: err    => { this.error.set(err.error?.detail ?? 'Tournament not found.'); this.loading.set(false); }
+  private reloadData(): void {
+    this.loading.set(true);
+    this.error.set('');
+
+    forkJoin({
+      matches: this.publicService.getMatches(this.pin),
+      teams: this.publicService.getTeams(this.pin)
+    }).subscribe({
+      next: ({ matches, teams }) => {
+        this.matches.set(matches);
+        this.teams.set(teams);
+        this.loading.set(false);
+      },
+      error: err => {
+        this.error.set(err.error?.detail ?? 'Tournament not found.');
+        this.loading.set(false);
+      }
     });
   }
 
@@ -216,6 +232,6 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
 
   teamName(id: number | null): string {
     if (id === null) return 'TBD';
-    return this.teams().find(t => t.id === id)?.name ?? `#${id}`;
+    return this.teamNames().get(id) ?? `#${id}`;
   }
 }

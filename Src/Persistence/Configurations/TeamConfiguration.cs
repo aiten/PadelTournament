@@ -14,6 +14,7 @@ public class TeamConfiguration : IEntityTypeConfiguration<Team>
         builder.HasKey(t => t.Id);
 
         builder.HasIndex(t => new { t.TournamentId, t.Player1, t.Player2 }).IsUnique();
+        builder.HasIndex(t => new { t.TournamentId, t.RegistrationCode }).IsUnique();
 
         builder.Property(t => t.RowVersion).IsRowVersion();
 
@@ -26,6 +27,6 @@ public class TeamConfiguration : IEntityTypeConfiguration<Team>
         builder.Property(t => t.Player2).AsText(64);
         builder.Ignore(t => t.Name);
 
-        builder.Property(j => j.RegistrationCode).AsText(5);
+        builder.Property(j => j.RegistrationCode).AsRequiredText(5);
     }
 }

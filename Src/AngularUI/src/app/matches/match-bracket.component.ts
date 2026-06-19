@@ -120,7 +120,7 @@ function cardTop(ri: number, ni: number): number {
 })
 export class MatchBracketComponent implements OnInit, OnDestroy {
   tournamentId = 0;
-  tournamentPin = 0;
+  tournamentPin = '';
   matches = signal<Match[]>([]);
   teams   = signal<Team[]>([]);
   loading = signal(true);
@@ -138,7 +138,7 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
     this.tournamentService.getById(this.tournamentId).subscribe({
       next: tournament => {
-        this.tournamentPin = tournament.registrationPin ?? 0;
+        this.tournamentPin = tournament.registrationPin ?? '';
         this.signalR.joinTournamentGroup(this.tournamentPin);
       }
     });

@@ -45,9 +45,9 @@ Console.WriteLine("Migrate Database");
 using (var scope = host.Services.CreateScope())
 {
     var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-    //await uow.DeleteDatabaseAsync();
-    //await uow.CreateDatabaseAsync();
-    await uow.MigrateDatabaseAsync();
+    await uow.DeleteDatabaseAsync();
+    await uow.CreateDatabaseAsync();
+    //await uow.MigrateDatabaseAsync();
 }
 
 Console.WriteLine("Import Data");
@@ -71,7 +71,7 @@ using (var scope = host.Services.CreateScope())
             Description     = "Test Tournament I",
             From            = new DateOnly(2025, 9, 18),
             To              = null,
-            RegistrationPin = 123
+            RegistrationPin = "12345"
         },
         new Tournament()
         {
@@ -79,7 +79,7 @@ using (var scope = host.Services.CreateScope())
             Description     = "Test Tournament II",
             From            = new DateOnly(2026, 5, 16),
             To              = new DateOnly(2026, 5, 20),
-            RegistrationPin = 321
+            RegistrationPin = "32100"
         }
     };
     await uow.Tournaments.AddRangeAsync(tournaments);
@@ -88,7 +88,7 @@ using (var scope = host.Services.CreateScope())
 
     for (int i = 1; i < 30; i++)
     {
-        await service.RegisterTeamByPinAsync($"Team {i}", 321);
+        await service.RegisterTeamByPinAsync($"Team {i}", "32100");
     }
 
     var entries = (await File.ReadAllLinesAsync("ImportData/Bibione202509.txt"))

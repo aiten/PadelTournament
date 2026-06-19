@@ -12,9 +12,9 @@ using System;
 
 using WebAPI.Filters;
 
-public record TeamRegistrationDto(string Name, int Pin);
+public record TeamRegistrationDto(string Name, string Pin);
 
-public record TeamRegistrationResultDto(string Name, int Pin, string RegistrationCode);
+public record TeamRegistrationResultDto(string Name, string Pin, string RegistrationCode);
 
 public static class RegistrationEndpoints
 {
