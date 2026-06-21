@@ -18,7 +18,7 @@ import { TournamentRegistrationRequest } from '../models/registration.model';
         </div>
         <div class="form-group">
           <label>PIN *</label>
-          <input type="number" name="pin" [(ngModel)]="pin" required min="100" max="999" class="form-control" />
+          <input type="text" name="pin" [(ngModel)]="pin" required maxlength="5" pattern="[0-9]{5}" class="form-control" />
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading()">
@@ -34,7 +34,7 @@ import { TournamentRegistrationRequest } from '../models/registration.model';
 })
 export class RegisterFormComponent implements OnInit {
   name = '';
-  pin: number | null = null;
+  pin = '';
   loading = signal(false);
   error = signal('');
 
@@ -46,7 +46,7 @@ export class RegisterFormComponent implements OnInit {
 
   ngOnInit(): void {
     const p = this.route.snapshot.queryParamMap.get('pin');
-    if (p !== null) this.pin = +p;
+    if (p !== null) this.pin = p;
   }
 
   register(): void {
@@ -54,7 +54,7 @@ export class RegisterFormComponent implements OnInit {
     this.error.set('');
     const req: TournamentRegistrationRequest = {
       name: this.name,
-      pin: this.pin!
+      pin: this.pin
     };
     this.service.register(req).subscribe({
       next: result => {

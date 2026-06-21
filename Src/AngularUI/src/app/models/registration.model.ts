@@ -1,10 +1,10 @@
 export interface TournamentRegistrationRequest {
   name: string;
-  pin: number;
+  pin: string;
 }
 
 export interface TournamentRegistrationResult {
   name: string;
-  pin: number;
+  pin: string;
   registrationCode: string;
 }
