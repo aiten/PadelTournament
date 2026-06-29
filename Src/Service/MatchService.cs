@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 public interface IMatchService
 {
-    Task<Match>  SingleMatchAsync(int  id, params string[] includeProperties);
+    Task<Match> SingleMatchAsync(int id, params string[] includeProperties);
 
     Task<Match> SingleMatchForTeamAsync(int matchId, int teamId, params string[] includeProperties);
 
@@ -31,14 +31,12 @@ public class MatchService : IMatchService
 {
     private readonly IUnitOfWork             _uow;
     private readonly ILogger<MatchService>   _logger;
-    private readonly ICurrentUserService     _currentUserService;
     private readonly IHubNotificationService _hub;
 
-    public MatchService(IUnitOfWork uow, ILogger<MatchService> logger, ICurrentUserService currentUserService, IHubNotificationService hub)
+    public MatchService(IUnitOfWork uow, ILogger<MatchService> logger, IHubNotificationService hub)
     {
         _uow                = uow;
         _logger             = logger;
-        _currentUserService = currentUserService;
         _hub                = hub;
     }
 
@@ -46,16 +44,7 @@ public class MatchService : IMatchService
 
     private async Task<Match?> GetMatchByIdAsync(int id, params string[] includeProperties)
     {
-        var entity = await _uow.Matches.GetByIdAsync(id, includeProperties);
-        var userId = await _currentUserService.IsAdminAsync() ? null : await _currentUserService.GetUserIdAsync();
-
-        if (entity is not null && userId is not null)
-        {
-            // check if tournament belongs to user (expect admin)
-            entity = await _uow.Tournaments.BelongsToUserAsync(entity.TournamentId, userId) ? entity : null;
-        }
-
-        return entity;
+        return await _uow.Matches.GetByIdAsync(id, includeProperties);
     }
 
     public async Task<Match> SingleMatchAsync(int id, params string[] includeProperties)

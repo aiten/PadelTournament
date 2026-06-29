@@ -15,7 +15,7 @@ using Persistence.QueryResult;
 
 public interface ITournamentRepository : IGenericRepository<Tournament>
 {
-    Task<IList<TournamentOverview>> GetTournamentOverviewsAsync(string? userId);
+    Task<IList<TournamentOverview>> GetTournamentOverviewsAsync();
 
     Task<Tournament?> GetByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false);
 
@@ -35,14 +35,9 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
         _logger    = logger;
     }
 
-    public async Task<IList<TournamentOverview>> GetTournamentOverviewsAsync(string? userId)
+    public async Task<IList<TournamentOverview>> GetTournamentOverviewsAsync()
     {
         var query = _dbContext.Tournaments.AsNoTracking();
-
-        if (userId is not null)
-        {
-            query = query.Where(t => t.UserId == userId);
-        }
 
         return await query
             .Select(t => new TournamentOverview(

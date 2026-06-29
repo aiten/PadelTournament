@@ -6,6 +6,7 @@ using Persistence;
 using Persistence.Model;
 using Persistence.QueryResult;
 
+using Shared;
 using Shared.Exceptions;
 
 using System;
@@ -43,35 +44,26 @@ public class TournamentService : ITournamentService
     private readonly IUnitOfWork                _uow;
     private readonly ILogger<TournamentService> _logger;
     private readonly IHubNotificationService    _hub;
-    private readonly ICurrentUserService          _currentUserService;
+    private readonly ITenantContext             _tenantContext;
 
-    public TournamentService(IUnitOfWork uow, ILogger<TournamentService> logger, IHubNotificationService hub, ICurrentUserService currentUserService)
+    public TournamentService(IUnitOfWork uow, ILogger<TournamentService> logger, IHubNotificationService hub, ITenantContext tenantContext)
     {
         _uow    = uow;
         _logger = logger;
         _hub    = hub;
-        _currentUserService = currentUserService;
+        _tenantContext = tenantContext;
     }
 
     #region REST
 
     public async Task<IList<TournamentOverview>> GetTournamentOverviewsAsync()
     {
-        var userId = await _currentUserService.IsAdminAsync() ? null : await _currentUserService.GetUserIdAsync();
-        return await _uow.Tournaments.GetTournamentOverviewsAsync(userId);
+        return await _uow.Tournaments.GetTournamentOverviewsAsync();
     }
 
     public async Task<Tournament?> GetTournamentByIdAsync(int id, params string[] includeProperties)
     {
-        var userId = await _currentUserService.IsAdminAsync() ? null : await _currentUserService.GetUserIdAsync();
         var tournament = await _uow.Tournaments.GetByIdAsync(id, includeProperties);
-
-        if (tournament is not null && userId is not null)
-        {
-            // check if tournament belongs to user (expect admin)
-            tournament = tournament.UserId == userId ? tournament : null;
-        }
-
         return tournament;
     }
 
@@ -103,7 +95,7 @@ public class TournamentService : ITournamentService
 
         tournament.Created         = DateTime.Now;
         tournament.Modified        = null;
-        tournament.UserId          = await _currentUserService.GetUserIdAsync();
+        tournament.UserId          = _tenantContext.TenantId;
         tournament.RegistrationPin = string.IsNullOrEmpty(tournament.RegistrationPin) ? await GenerateUniqueRegistrationPinAsync() : tournament.RegistrationPin;
 
         await _uow.Tournaments.AddAsync(tournament);

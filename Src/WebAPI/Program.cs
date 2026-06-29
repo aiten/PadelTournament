@@ -25,6 +25,8 @@ using Persistence;
 
 using Service;
 
+using Shared;
+
 using WebAPI;
 using WebAPI.Endpoints;
 using WebAPI.ExceptionHandlers;
@@ -154,6 +156,7 @@ builder.Services.AddSignalR();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<IHubNotificationService, HubNotificationService>();
+builder.Services.AddScoped<ITenantContext, TenantContext>();
 
 builder.Services
     .AddScoped<UnitOfWork>()
@@ -190,6 +193,9 @@ if (true) // app.Environment.IsDevelopment())
 app.UseCors(b => b.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
 
 app.UseAuthentication();
+
+app.UseMiddleware<TenantMiddleware>();
+
 app.UseAuthorization();
 
 app.UseHttpsRedirection();
