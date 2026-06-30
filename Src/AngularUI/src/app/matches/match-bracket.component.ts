@@ -87,7 +87,7 @@ function cardTop(ri: number, ni: number): number {
             @for (e of positions(); track e.match.id) {
               <div class="match-card" [style.top.px]="e.top" [style.left.px]="e.left">
                 @if (!(e.match.round === 1 && e.match.teamAId && e.match.teamBId && !e.match.result)) {
-                  <div class="match-label">Round {{ e.match.round }} · Match {{ e.match.no }}</div>
+                  <div class="match-label">{{ matchLabel(e.match) }}</div>
                 }
                 <div class="team-row"
                      [class.winner]="e.match.result === 'WonA'"
@@ -185,10 +185,9 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
       }));
   });
 
-  totalWidth = computed(() => {
-    const maxRound = Math.max(0, ...this.matches().map(m => m.round));
-    return maxRound * COL_W - CONN_W + 2;
-  });
+  maxRound = computed(() => Math.max(0, ...this.matches().map(m => m.round)));
+
+  totalWidth = computed(() => this.maxRound() * COL_W - CONN_W + 2);
 
   totalHeight = computed(() => {
     const round1Count = this.matches().filter(m => m.round === 1).length;
@@ -199,10 +198,9 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     const result: Line[] = [];
     const hideByes = this.hideByes();
     const rounds = [...new Set(this.matches().map(m => m.round))].sort((a, b) => a - b);
-    const maxRound = Math.max(...rounds);
 
     for (const round of rounds) {
-      if (round === maxRound) continue;
+      if (round === this.maxRound()) continue;
 
       const ri       = round - 1;
       const midX     = ri * COL_W + CARD_W + CONN_W / 2;
@@ -239,6 +237,16 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     }
     return result;
   });
+
+  matchLabel(match: Match): string {
+    if (match.round === this.maxRound())
+      return 'Final';
+
+    if (match.round === this.maxRound()-1)
+      return `Semifinal ${match.no}`;
+
+    return `Round ${match.round} · Match ${match.no}`;
+  }
 
   teamName(id: number | null): string {
     if (id === null) return 'TBD';

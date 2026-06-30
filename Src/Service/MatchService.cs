@@ -35,9 +35,9 @@ public class MatchService : IMatchService
 
     public MatchService(IUnitOfWork uow, ILogger<MatchService> logger, IHubNotificationService hub)
     {
-        _uow                = uow;
-        _logger             = logger;
-        _hub                = hub;
+        _uow    = uow;
+        _logger = logger;
+        _hub    = hub;
     }
 
     #region REST
@@ -100,38 +100,49 @@ public class MatchService : IMatchService
 
     public async Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result)
     {
-        var match = await GetActiveMatchAsync(matchId);
+        bool changed = false;
+        var  match   = await GetActiveMatchAsync(matchId);
 
         if (forTeamA)
         {
+            changed       = changed || match.AcceptA != result;
             match.AcceptA = result;
         }
         else
         {
+            changed       = changed || match.AcceptB != result;
             match.AcceptB = result;
         }
 
         if (match.AcceptA == match.AcceptB)
         {
-            await SetWinnerAsync(match, result);
+            changed = await SetWinnerAsync(match, result) || changed;
         }
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+        if (changed)
+        {
+            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+        }
     }
 
     public async Task SetWinnerAsync(int matchId, MatchResult winner)
     {
         var match = await GetActiveMatchAsync(matchId);
 
-        await SetWinnerAsync(match, winner);
+        bool changed = await SetWinnerAsync(match, winner);
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+        if (changed)
+        {
+            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+        }
     }
 
-    private async Task SetWinnerAsync(Match match, MatchResult winner)
+    private async Task<bool> SetWinnerAsync(Match match, MatchResult winner)
     {
+        bool changed = match.Result != winner;
+
         match.Result = winner;
 
         var winnerId = winner == MatchResult.WonA ? match.TeamAId : match.TeamBId;
@@ -145,6 +156,8 @@ public class MatchService : IMatchService
                     throw new IllegalValuesException($"Teams-A cannot be set (match={match.NextMatch.Id})");
                 }
 
+                changed = changed || match.NextMatch.TeamAId != winnerId;
+
                 match.NextMatch.TeamAId = winnerId;
             }
             else
@@ -154,9 +167,13 @@ public class MatchService : IMatchService
                     throw new IllegalValuesException($"Teams-B cannot be set (match={match.NextMatch.Id})");
                 }
 
+                changed = changed || match.NextMatch.TeamBId != winnerId;
+
                 match.NextMatch.TeamBId = winnerId;
             }
         }
+
+        return changed;
     }
 
     private async Task<Match> GetActiveMatchAsync(int matchId)
