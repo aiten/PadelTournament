@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ChangeDetectionStrategy, HostListener, Renderer2 } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
 import { GlobalStateService } from '../services/global-state.service';
@@ -26,8 +26,13 @@ function cardTop(ri: number, ni: number): number {
   standalone: true,
   imports: [RouterModule],
   styles: [`
-    .bracket-scroll { overflow: auto; padding-bottom: 24px; }
-    .bracket-wrap { position: relative; }
+    .page         { padding: 0 24px; }
+    .bracket-scroll {
+      overflow: auto;
+      height: calc(100vh - 130px);
+    }
+    .bracket-outer  { position: relative; }
+    .bracket-wrap   { position: relative; transform-origin: top left; }
     .match-card {
       position: absolute;
       width: ${CARD_W}px;
@@ -65,31 +70,34 @@ function cardTop(ri: number, ni: number): number {
         <p class="empty">No matches found.</p>
       } @else {
         <div class="bracket-scroll">
-          <div class="bracket-wrap" [style.width.px]="totalWidth()" [style.height.px]="totalHeight()">
-            <svg [attr.width]="totalWidth()" [attr.height]="totalHeight()"
-                 style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;">
-              @for (l of lines(); track $index) {
-                <line [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2"
-                      stroke="#cbd5e1" stroke-width="1.5" />
+          <div class="bracket-outer" [style.width.px]="scaledWidth()" [style.height.px]="scaledHeight()">
+            <div class="bracket-wrap" [style.width.px]="totalWidth()" [style.height.px]="totalHeight()"
+                 [style.transform]="'scale(' + scale() + ')'">
+              <svg [attr.width]="totalWidth()" [attr.height]="totalHeight()"
+                   style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;">
+                @for (l of lines(); track $index) {
+                  <line [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2"
+                        stroke="#cbd5e1" stroke-width="1.5" />
+                }
+              </svg>
+              @for (e of positions(); track e.match.id) {
+                <div class="match-card" [style.top.px]="e.top" [style.left.px]="e.left">
+                  <div class="match-label">{{ matchLabel(e.match) }}</div>
+                  <div class="team-row"
+                       [class.winner]="e.match.result === 'WonA'"
+                       [class.loser]="e.match.result === 'WonB'"
+                       [class.tbd]="!e.match.teamAId">
+                    {{ teamName(e.match.teamAId) }}
+                  </div>
+                  <div class="team-row"
+                       [class.winner]="e.match.result === 'WonB'"
+                       [class.loser]="e.match.result === 'WonA'"
+                       [class.tbd]="!e.match.teamBId">
+                    {{ teamName(e.match.teamBId) }}
+                  </div>
+                </div>
               }
-            </svg>
-            @for (e of positions(); track e.match.id) {
-              <div class="match-card" [style.top.px]="e.top" [style.left.px]="e.left">
-                <div class="match-label">{{ matchLabel(e.match) }}</div>
-                <div class="team-row"
-                     [class.winner]="e.match.result === 'WonA'"
-                     [class.loser]="e.match.result === 'WonB'"
-                     [class.tbd]="!e.match.teamAId">
-                  {{ teamName(e.match.teamAId) }}
-                </div>
-                <div class="team-row"
-                     [class.winner]="e.match.result === 'WonB'"
-                     [class.loser]="e.match.result === 'WonA'"
-                     [class.tbd]="!e.match.teamBId">
-                  {{ teamName(e.match.teamBId) }}
-                </div>
-              </div>
-            }
+            </div>
           </div>
         </div>
       }
@@ -103,7 +111,25 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   error   = signal('');
   teamNames = computed(() => new Map(this.teams().map(t => [t.id, t.name])));
 
+  containerWidth = signal(window.innerWidth);
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.containerWidth.set(window.innerWidth);
+  }
+
+  scale = computed(() => {
+    const tw = this.totalWidth();
+    const cw = this.containerWidth();
+    if (tw <= 0 || cw <= 0) return 1;
+    return cw > tw ? cw / tw : 1;
+  });
+
+  scaledWidth  = computed(() => Math.round(this.totalWidth()  * this.scale()));
+  scaledHeight = computed(() => Math.round(this.totalHeight() * this.scale()));
+
   private pin = '';
+  private mainEl: HTMLElement | null = null;
   private signalRSub?: Subscription;
 
   constructor(
@@ -111,7 +137,8 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
     private router: Router,
     private publicService: PublicService,
     private globalState: GlobalStateService,
-    private signalR: PublicSignalRService
+    private signalR: PublicSignalRService,
+    private renderer: Renderer2
   ) {}
 
   goBack(): void {
@@ -123,6 +150,9 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.mainEl = document.querySelector('main');
+    if (this.mainEl) this.renderer.addClass(this.mainEl, 'bracket-fullwidth');
+
     this.pin = this.route.snapshot.paramMap.get('pin')!;
 
     this.signalR.joinTournamentGroup(this.pin);
@@ -142,6 +172,7 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.mainEl) this.renderer.removeClass(this.mainEl, 'bracket-fullwidth');
     this.signalR.leaveTournamentGroup(this.pin);
     this.signalRSub?.unsubscribe();
   }
