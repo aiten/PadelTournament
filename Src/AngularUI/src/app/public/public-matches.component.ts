@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { forkJoin, Subscription } from 'rxjs';
 import { PublicService } from '../services/public.service';
@@ -30,6 +30,7 @@ import { Tournament } from '../models/tournament.model';
     .my-team { font-weight: 600; }
     .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

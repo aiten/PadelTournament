@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TeamService } from '../services/team.service';
@@ -8,6 +8,7 @@ import { TournamentRegistrationResult } from '../models/registration.model';
   selector: 'app-team-bulk-add',
   standalone: true,
   imports: [RouterModule, FormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

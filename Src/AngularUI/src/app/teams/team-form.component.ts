@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Team } from '../models/team.model';
@@ -8,6 +8,7 @@ import { TeamService } from '../services/team.service';
   selector: 'app-team-form',
   standalone: true,
   imports: [FormsModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <h2>{{ isNew ? 'Add Team' : 'Edit Team' }}</h2>

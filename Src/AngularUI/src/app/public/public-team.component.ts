@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { GlobalStateService } from '../services/global-state.service';
 import { PublicService } from '../services/public.service';
@@ -20,6 +20,7 @@ import { Team } from '../models/team.model';
     .info-label { font-size: .7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
     .info-value { font-weight: 600; color: #1e293b; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

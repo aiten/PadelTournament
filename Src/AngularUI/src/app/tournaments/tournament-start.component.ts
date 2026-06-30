@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Team } from '../models/team.model';
@@ -17,6 +17,7 @@ type SortCol = 'name' | 'registrationDate' | 'seed' | 'startMatchPos';
     .sort-icon { margin-left: 4px; font-size: .8em; opacity: .5; }
     th.sort-active .sort-icon { opacity: 1; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

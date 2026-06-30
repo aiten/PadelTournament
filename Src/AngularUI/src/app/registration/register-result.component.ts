@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, AfterViewInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { RegistrationService } from '../services/registration.service';
 import { toCanvas } from 'qrcode';
@@ -11,6 +11,7 @@ import { toCanvas } from 'qrcode';
     .qr-wrap { margin-top: .5rem; }
     .qr-wrap canvas { display: block; border: 1px solid #e2e8f0; border-radius: 6px; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (result()) {
       <div class="page">

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
 import { GlobalStateService } from '../services/global-state.service';
@@ -50,6 +50,7 @@ function cardTop(ri: number, ni: number): number {
     .team-row.loser  { color: #94a3b8; }
     .team-row.tbd    { color: #cbd5e1; font-style: italic; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

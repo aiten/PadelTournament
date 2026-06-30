@@ -1,4 +1,4 @@
-import { Component, signal, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, signal, AfterViewInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { GlobalStateService } from '../services/global-state.service';
@@ -8,6 +8,7 @@ import { toCanvas } from 'qrcode';
   selector: 'app-public-entry',
   standalone: true,
   imports: [FormsModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <h2>Tournament Public Area</h2>

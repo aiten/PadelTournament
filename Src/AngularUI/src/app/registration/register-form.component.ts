@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { RegistrationService } from '../services/registration.service';
@@ -8,6 +8,7 @@ import { TournamentRegistrationRequest } from '../models/registration.model';
   selector: 'app-register-form',
   standalone: true,
   imports: [FormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <h2>Register for Tournament</h2>

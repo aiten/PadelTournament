@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { TournamentOverview } from '../models/tournament-overview.model';
 import { TournamentService } from '../services/tournament.service';
@@ -15,6 +15,7 @@ type SortCol = 'description' | 'from' | 'to' | 'registrationPin' | 'teams' | 'fi
     .sort-icon { margin-left: 4px; font-size: .8em; opacity: .5; }
     th.sort-active .sort-icon { opacity: 1; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

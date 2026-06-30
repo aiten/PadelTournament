@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Match } from '../models/match.model';
@@ -62,6 +62,7 @@ function cardTop(ri: number, ni: number): number {
     .winner-btns { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
     .winner-btns.compact .btn { padding: 1px 6px; font-size: .7rem; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">

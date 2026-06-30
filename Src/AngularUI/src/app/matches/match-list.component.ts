@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Match } from '../models/match.model';
@@ -21,6 +21,7 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
     .sort-icon { margin-left: 4px; font-size: .8em; opacity: .5; }
     th.sort-active .sort-icon { opacity: 1; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">
