@@ -79,6 +79,7 @@ public static class PublicEndpoints
                 return Results.NoContent();
             })
             .WithName("ReportPublicMatchResult")
+            .RequireRateLimiting("public-lookup")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);

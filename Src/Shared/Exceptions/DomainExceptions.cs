@@ -9,3 +9,5 @@ public class BusinessRuleException(string message) : Exception(message);
 public class IllegalValuesException(string message) : Exception(message);
 
 public class InvalidTournamentDataException(string message) : Exception(message);
+
+public class ConflictException(string message) : Exception(message);

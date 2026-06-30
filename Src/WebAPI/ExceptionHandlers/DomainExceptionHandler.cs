@@ -21,6 +21,7 @@ public class DomainExceptionHandler : IExceptionHandler
             NotFoundException e              => (StatusCodes.Status404NotFound, e.Message),
             BusinessRuleException e          => (StatusCodes.Status422UnprocessableEntity, e.Message),
             IllegalValuesException e         => (StatusCodes.Status400BadRequest, e.Message),
+            ConflictException e      => (StatusCodes.Status409Conflict, e.Message),
             InvalidTournamentDataException e => (StatusCodes.Status422UnprocessableEntity, e.Message),
             _                                => (0, null)
         };
@@ -31,7 +32,7 @@ public class DomainExceptionHandler : IExceptionHandler
         }
 
         httpContext.Response.StatusCode = status;
-        await Results.Problem(statusCode: status, title: title)
+        await Results.Problem(statusCode: status, detail: title, title: title)
             .ExecuteAsync(httpContext);
         return true;
     }

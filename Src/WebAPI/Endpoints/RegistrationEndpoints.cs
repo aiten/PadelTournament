@@ -40,6 +40,7 @@ public static class RegistrationEndpoints
             })
             .WithValidation<TeamRegistrationDto>()
             .WithName("RegisterForTournament")
+            .RequireRateLimiting("public-lookup")
             .Produces<TeamRegistrationResultDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
     }
