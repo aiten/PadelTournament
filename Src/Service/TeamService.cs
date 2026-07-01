@@ -108,6 +108,6 @@ public class TeamService : ITeamService
     public async Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId)
     {
         //public => no check for tournament ownership, as this is used for match details which are public
-        return await _uow.Matches.GetByTeamAsync(teamId);
+        return await _uow.Matches.GetByTeamPublicAsync(teamId);
     }
 }

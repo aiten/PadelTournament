@@ -362,21 +362,20 @@ public class TournamentService : ITournamentService
 
     public async Task<Team> RegisterTeamAsync(int tournamentId, string name, int? seed, int? startMatchPos)
     {
-        var tournament = await SingleTournamentAsync(tournamentId);
+        var tournament = await SingleTournamentAsync(tournamentId, nameof(Tournament.Teams), nameof(Tournament.Matches));
         return await RegisterTeamAsync(tournament, name, seed, startMatchPos, true);
     }
 
     public async Task<Team> RegisterTeamByPinAsync(string name, string pin)
     {
-        var tournament = await _uow.Tournaments.GetByPinAsync(pin) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
+        var tournament = await _uow.Tournaments.GetByPinAsync(pin, true,true) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
 
         return await RegisterTeamAsync(tournament, name, null, null, true);
     }
 
     private async Task<Team> RegisterTeamAsync(Tournament tournament, string name, int? seed, int? startMatchPos, bool notify)
     {
-        bool alreadyStarted = await _uow.Matches
-            .AnyMatchesInTournamentAsync(tournament.Id);
+        bool alreadyStarted = tournament.Matches.Any();
         if (alreadyStarted)
             throw new InvalidTournamentDataException($"Tournament '{tournament.Description}' is already started");
 
@@ -385,7 +384,7 @@ public class TournamentService : ITournamentService
         var p2Raw    = slashIdx >= 0 ? name[(slashIdx + 1)..].Trim() : null;
         var player2  = p2Raw is { Length: > 0 } ? p2Raw : null;
 
-        bool alreadyRegistered = await _uow.Teams.AnyPlayerAsync(tournament.Id, player1, player2);
+        bool alreadyRegistered = tournament.Teams.Any(t => t.Player1 == player1 && t.Player2 == player2);
         if (alreadyRegistered)
             throw new InvalidTournamentDataException($"Team '{name}' is already registered for this tournament ({tournament.Description})");
 
@@ -434,7 +433,7 @@ public class TournamentService : ITournamentService
         do
         {
             code = rng.Next(10000, 100000).ToString();
-        } while (await _uow.Teams.AnyRegistrationCodeAsync(tournamentId, code));
+        } while (await _uow.Teams.AnyRegistrationCodePublicAsync(tournamentId, code));
 
         return code;
     }

@@ -5,9 +5,9 @@ using Base.Persistence.Contracts;
 
 public interface IUnitOfWork : IBaseUnitOfWork
 {
-    ITournamentRepository Tournaments { get; }
-    ITeamRepository       Teams       { get; }
-    IMatchRepository      Matches     { get; }
+    ITournamentRepository       Tournaments      { get; }
+    ITeamRepository             Teams            { get; }
+    IMatchRepository            Matches          { get; }
 }
 
 public class UnitOfWork : BaseUnitOfWork, IUnitOfWork
@@ -18,12 +18,12 @@ public class UnitOfWork : BaseUnitOfWork, IUnitOfWork
         IMatchRepository                   matches
     ) : base(dBContext)
     {
-        Tournaments = tournaments;
-        Teams       = teams;
-        Matches     = matches;
+        Tournaments       = tournaments;
+        Teams             = teams;
+        Matches           = matches;
     }
 
-    public ITournamentRepository Tournaments { get; }
-    public ITeamRepository       Teams       { get; }
-    public IMatchRepository      Matches     { get; }
+    public ITournamentRepository       Tournaments       { get; }
+    public ITeamRepository             Teams             { get; }
+    public IMatchRepository            Matches           { get; }
 }

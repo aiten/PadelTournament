@@ -17,15 +17,15 @@ using Shared.Exceptions;
 
 public interface IMatchRepository : IGenericRepository<Match>
 {
-    Task<bool> AnyMatchesInTournamentAsync(int tournamentId);
-
-    Task<IList<Match>> GetByTeamAsync(int teamId);
-
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
     Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result);
 
+    // no Tenant
+    Task<IList<Match>> GetByTeamPublicAsync(int teamId);
+
     Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties);
+
 }
 
 public class MatchRepository : GenericRepository<Match>, IMatchRepository
@@ -35,39 +35,6 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
     public MatchRepository(ApplicationDbContext dbContext) : base(dbContext)
     {
         _dbContext = dbContext;
-    }
-
-    public async Task<bool> AnyMatchesInTournamentAsync(int tournamentId)
-    {
-        return await DbSet.IgnoreQueryFilters().AnyAsync(m => m.TournamentId == tournamentId);
-    }
-
-    public async Task<IList<Match>> GetByTeamAsync(int teamId)
-    {
-        return await _dbContext.Matches
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .Where(m => m.TeamAId == teamId || m.TeamBId == teamId)
-            .OrderBy(m => m.Round)
-            .ThenBy(m => m.No)
-            .ToListAsync();
-    }
-
-    public async Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties)
-    {
-        var query = DbSet
-            .IgnoreQueryFilters();
-
-        if (includeProperties != null)
-        {
-            foreach (string includeProperty in includeProperties!)
-            {
-                query = query.Include(includeProperty);
-            }
-        }
-
-        return await query
-            .FirstOrDefaultAsync(m => m.Id == matchId);
     }
 
     public async Task<MatchResultOverview?> GetMatchResultAsync(int matchId)
@@ -131,4 +98,36 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
 
         return match;
     }
+
+    #region NoTenant
+
+    public async Task<IList<Match>> GetByTeamPublicAsync(int teamId)
+    {
+        return await _dbContext.Matches
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(m => m.TeamAId == teamId || m.TeamBId == teamId)
+            .OrderBy(m => m.Round)
+            .ThenBy(m => m.No)
+            .ToListAsync();
+    }
+
+    public async Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties)
+    {
+        var query = _dbContext.Matches
+            .IgnoreQueryFilters();
+
+        if (includeProperties != null)
+        {
+            foreach (string includeProperty in includeProperties!)
+            {
+                query = query.Include(includeProperty);
+            }
+        }
+
+        return await query
+            .FirstOrDefaultAsync(m => m.Id == matchId);
+    }
+
+    #endregion
 }
