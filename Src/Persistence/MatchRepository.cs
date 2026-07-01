@@ -40,16 +40,6 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
         return await DbSet.IgnoreQueryFilters().AnyAsync(m => m.TournamentId == tournamentId);
     }
 
-    public async Task<IList<Match>> GetByTournamentAsync(int tournamentId)
-    {
-        return await _dbContext.Matches
-            .AsNoTracking()
-            .Where(m => m.TournamentId == tournamentId)
-            .OrderBy(m => m.Round)
-            .ThenBy(m => m.No)
-            .ToListAsync();
-    }
-
     public async Task<IList<Match>> GetByTeamAsync(int teamId)
     {
         return await _dbContext.Matches

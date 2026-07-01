@@ -35,9 +35,7 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
 
     public async Task<IList<TournamentOverview>> GetTournamentOverviewsAsync()
     {
-        var query = _dbContext.Tournaments.AsNoTracking();
-
-        return await query
+        return await DbSet
             .Select(t => new TournamentOverview(
                 t.Id,
                 t.Description,
@@ -53,7 +51,7 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
 
     public async Task<Tournament?> GetByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
     {
-        var query = _dbContext.Tournaments.IgnoreQueryFilters().Where(t => t.RegistrationPin == pin);
+        var query = DbSet.IgnoreQueryFilters().Where(t => t.RegistrationPin == pin);
         if (loadTeams)
         {
             query = query.Include(t => t.Teams);

@@ -101,10 +101,12 @@ public static class MatchResultEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        /*
         var routeAdmin = app
             .MapGroup($"{baseRoute}/{{tournamentId:int}}/matches/{{matchId:int}}/result")
             .WithTags("MatchResults")
             .RequireAuthorization(Settings.AdminPolicyName);
+        */
 
         routeUser.MapGet("", async (int tournamentId, int matchId, IMatchService matchService) =>
             {

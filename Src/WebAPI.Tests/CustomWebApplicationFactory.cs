@@ -14,20 +14,25 @@ using Base.Persistence.Contracts;
 
 using Persistence;
 
+using Service;
+
+/// <summary>
+/// Hosts the WebAPI with the Service-layer (ITournamentService/ITeamService/IMatchService) replaced by
+/// NSubstitute mocks, so endpoint tests exercise routing, auth, validation and status-code mapping without
+/// a real database.
+/// </summary>
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public IUnitOfWork           UnitOfWork           { get; } = Substitute.For<IUnitOfWork>();
-    public ITournamentRepository TournamentRepository { get; } = Substitute.For<ITournamentRepository>();
-    public ITeamRepository       TeamRepository       { get; } = Substitute.For<ITeamRepository>();
-    public IMatchRepository      MatchRepository      { get; } = Substitute.For<IMatchRepository>();
-    public TestAuthContext        TestAuth             { get; } = new();
+    public ITournamentService   TournamentService   { get; } = Substitute.For<ITournamentService>();
+    public ITeamService         TeamService         { get; } = Substitute.For<ITeamService>();
+    public IMatchService        MatchService        { get; } = Substitute.For<IMatchService>();
+    public ITransactionProvider TransactionProvider { get; } = Substitute.For<ITransactionProvider>();
+    public ICurrentUserService  CurrentUserService  { get; } = Substitute.For<ICurrentUserService>();
+    public TestAuthContext      TestAuth            { get; } = new();
 
     public CustomWebApplicationFactory()
     {
-        UnitOfWork.Tournaments.Returns(TournamentRepository);
-        UnitOfWork.Teams.Returns(TeamRepository);
-        UnitOfWork.Matches.Returns(MatchRepository);
-        UnitOfWork.BeginTransactionAsync().Returns(Substitute.For<ITransaction>());
+        TransactionProvider.BeginTransactionAsync().Returns(Substitute.For<ITransaction>());
     }
 
     /// <summary>
@@ -36,9 +41,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     /// </summary>
     public void Reset()
     {
-        TournamentRepository.ClearReceivedCalls();
-        TeamRepository.ClearReceivedCalls();
-        MatchRepository.ClearReceivedCalls();
+        TournamentService.ClearReceivedCalls();
+        TeamService.ClearReceivedCalls();
+        MatchService.ClearReceivedCalls();
+        TransactionProvider.ClearReceivedCalls();
+        CurrentUserService.ClearReceivedCalls();
         TestAuth.IsAuthenticated = true;
         TestAuth.Roles           = [];
     }
@@ -47,10 +54,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
-            // Remove the real DbContext, UnitOfWork, and all repository registrations
-            var persistenceAssembly = typeof(Persistence.ApplicationDbContext).Assembly;
+            // Remove the real DbContext/UnitOfWork/repositories, the real Service implementations, and the
+            // real ICurrentUserService (which needs a live DbContext) — everything below is mocked instead.
+            var persistenceAssembly = typeof(ApplicationDbContext).Assembly;
             var descriptors = services
                 .Where(d => d.ServiceType == typeof(IUnitOfWork) ||
+                            d.ServiceType == typeof(ITransactionProvider) ||
+                            d.ServiceType == typeof(ITournamentService) ||
+                            d.ServiceType == typeof(ITeamService) ||
+                            d.ServiceType == typeof(IMatchService) ||
+                            d.ServiceType == typeof(ICurrentUserService) ||
                             (d.ServiceType.FullName != null && d.ServiceType.FullName.Contains("DbContext")) ||
                             (d.ImplementationType != null && d.ImplementationType.Assembly == persistenceAssembly))
                 .ToList();
@@ -75,8 +88,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                         p => p.RequireAuthenticatedUser()
                                .RequireRole(Settings.KeycloakAdminRoleName, Settings.KeycloakUserRoleName));
 
-            // Register mock UnitOfWork
-            services.AddScoped<IUnitOfWork>(_ => UnitOfWork);
+            // Register mocked services
+            services.AddScoped<ITournamentService>(_ => TournamentService);
+            services.AddScoped<ITeamService>(_ => TeamService);
+            services.AddScoped<IMatchService>(_ => MatchService);
+            services.AddScoped<ITransactionProvider>(_ => TransactionProvider);
+            services.AddScoped<ICurrentUserService>(_ => CurrentUserService);
         });
 
         builder.UseEnvironment("Development");

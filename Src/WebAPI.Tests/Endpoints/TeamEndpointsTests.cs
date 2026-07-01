@@ -12,6 +12,8 @@ namespace WebAPI.Tests.Endpoints;
 
 using Persistence.Model;
 
+using Shared.Exceptions;
+
 public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
@@ -29,6 +31,7 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     private void AsAdmin()           => _factory.TestAuth.Roles = [Settings.KeycloakAdminRoleName];
     private void AsUser()            => _factory.TestAuth.Roles = [Settings.KeycloakUserRoleName];
     private void AsUnauthenticated() => _factory.TestAuth.IsAuthenticated = false;
+    private void AsMissingRole()     => _factory.TestAuth.Roles = [];
 
     private static string TeamsUrl(int tournamentId = TournamentId) =>
         $"/api/tournament/{tournamentId}/teams";
@@ -41,7 +44,17 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         Id               = id,
         TournamentId     = tournamentId,
         Player1          = $"Team {id}",
-        RegistrationDate = new DateTime(2025, 1, 10)
+        RegistrationDate = new DateTime(2025, 1, 10),
+        RegistrationCode = "00000"
+    };
+
+    private static Tournament MakeTournament(IList<Team> teams) => new()
+    {
+        Id              = TournamentId,
+        Description     = "Spring Cup",
+        From            = new DateOnly(2025, 1, 1),
+        RegistrationPin = "12345",
+        Teams           = teams
     };
 
     // ─── GET /api/tournament/{id}/teams ──────────────────────────────────────
@@ -51,7 +64,7 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     {
         AsUser();
         var teams = new List<Team> { MakeTeam(1), MakeTeam(2) };
-        _factory.TeamRepository.GetByTournamentAsync(TournamentId).Returns(teams);
+        _factory.TournamentService.SingleTournamentAsync(TournamentId, nameof(Tournament.Teams)).Returns(MakeTournament(teams));
 
         var response = await _client.GetAsync(TeamsUrl());
 
@@ -65,7 +78,7 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetAll_ReturnsEmptyList_WhenNoTeams()
     {
         AsUser();
-        _factory.TeamRepository.GetByTournamentAsync(TournamentId).Returns(new List<Team>());
+        _factory.TournamentService.SingleTournamentAsync(TournamentId, nameof(Tournament.Teams)).Returns(MakeTournament([]));
 
         var response = await _client.GetAsync(TeamsUrl());
 
@@ -87,7 +100,7 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetAll_Returns403_WhenMissingRole()
     {
-        _factory.TestAuth.Roles = [];
+        AsMissingRole();
 
         var response = await _client.GetAsync(TeamsUrl());
 
@@ -100,7 +113,7 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetById_ReturnsOk_WhenExists()
     {
         AsUser();
-        _factory.TeamRepository.GetByIdAsync(1).Returns(MakeTeam(1));
+        _factory.TeamService.SingleTeamAsync(1).Returns(MakeTeam(1));
 
         var response = await _client.GetAsync(TeamUrl(1));
 
@@ -115,7 +128,8 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetById_Returns404_WhenTeamNotFound()
     {
         AsUser();
-        _factory.TeamRepository.GetByIdAsync(999).Returns((Team?)null);
+        _factory.TeamService.SingleTeamAsync(999)
+            .Returns(Task.FromException<Team>(new NotFoundException("Team 999 not found")));
 
         var response = await _client.GetAsync(TeamUrl(999));
 
@@ -123,15 +137,15 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetById_Returns404_WhenTeamBelongsToDifferentTournament()
+    public async Task GetById_Returns400_WhenTeamBelongsToDifferentTournament()
     {
         AsUser();
         // Team 5 belongs to tournament 99, not tournament 1
-        _factory.TeamRepository.GetByIdAsync(5).Returns(MakeTeam(5, tournamentId: 99));
+        _factory.TeamService.SingleTeamAsync(5).Returns(MakeTeam(5, tournamentId: 99));
 
         var response = await _client.GetAsync(TeamUrl(5, tournamentId: TournamentId));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -153,8 +167,9 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var dto     = new TeamDto(0, TournamentId, "New Team", null, "", 3, null, DateTime.Now, null);
         var created = MakeTeam(10);
 
-        _ = _factory.TeamRepository.AddAsync(Arg.Do<Team>(t => t.Id = 10));
-        _factory.TeamRepository.GetByIdAsync(10).Returns(created);
+        _factory.TournamentService.RegisterTeamAsync(TournamentId, "New Team", 3, null)
+            .Returns(new Team { Id = 10, TournamentId = TournamentId, Player1 = "New Team", RegistrationCode = "00000" });
+        _factory.TeamService.GetTeamByIdAsync(10).Returns(created);
 
         var response = await _client.PostAsJsonAsync(TeamsUrl(), dto);
 
@@ -197,9 +212,9 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Create_Returns403_WhenNotAdmin()
+    public async Task Create_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
         var dto = new TeamDto(0, TournamentId, "New Team", null, "", null, null, DateTime.Now, null);
 
         var response = await _client.PostAsJsonAsync(TeamsUrl(), dto);
@@ -224,15 +239,12 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Update_Returns204_WhenValid()
     {
         AsAdmin();
-        var entity = MakeTeam(1);
-        _factory.TeamRepository.GetByIdAsync(1).Returns(entity);
-        var dto = new TeamDto(1, TournamentId, "Updated Name", null, "", 5, null, entity.RegistrationDate, null);
+        var dto = new TeamDto(1, TournamentId, "Updated Name", null, "", 5, null, DateTime.Now, null);
 
         var response = await _client.PutAsJsonAsync(TeamUrl(1), dto);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        entity.Name.Should().Be("Updated Name");
-        entity.Seed.Should().Be(5);
+        await _factory.TeamService.Received(1).UpdateTeamAsync(1, TournamentId, "Updated Name", null, 5, null);
     }
 
     [Fact]
@@ -258,27 +270,29 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Update_Returns400_WhenTeamNotFound()
+    public async Task Update_Returns404_WhenTeamNotFound()
     {
         AsAdmin();
-        _factory.TeamRepository.GetByIdAsync(999).Returns((Team?)null);
+        _factory.TeamService.UpdateTeamAsync(999, TournamentId, "Updated Name", null, null, null)
+            .Returns(Task.FromException(new NotFoundException("Team 999 not found")));
         var dto = new TeamDto(999, TournamentId, "Updated Name", null, "", null, null, DateTime.Now, null);
 
         var response = await _client.PutAsJsonAsync(TeamUrl(999), dto);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Update_Returns400_WhenTeamBelongsToDifferentTournament()
+    public async Task Update_Returns404_WhenTeamBelongsToDifferentTournament()
     {
         AsAdmin();
-        _factory.TeamRepository.GetByIdAsync(5).Returns(MakeTeam(5, tournamentId: 99));
+        _factory.TeamService.UpdateTeamAsync(5, TournamentId, "Updated Name", null, null, null)
+            .Returns(Task.FromException(new NotFoundException("Team 5 not found in tournament 1")));
         var dto = new TeamDto(5, TournamentId, "Updated Name", null, "", null, null, DateTime.Now, null);
 
         var response = await _client.PutAsJsonAsync(TeamUrl(5, TournamentId), dto);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -293,9 +307,9 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Update_Returns403_WhenNotAdmin()
+    public async Task Update_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
         var dto = new TeamDto(1, TournamentId, "Updated Name", null, "", null, null, DateTime.Now, null);
 
         var response = await _client.PutAsJsonAsync(TeamUrl(1), dto);
@@ -309,39 +323,41 @@ public class TeamEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Delete_Returns204_WhenExists()
     {
         AsAdmin();
-        _factory.TeamRepository.GetByIdAsync(1).Returns(MakeTeam(1));
 
         var response = await _client.DeleteAsync(TeamUrl(1));
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.TeamService.Received(1).DeleteTeamAsync(1, TournamentId);
     }
 
     [Fact]
-    public async Task Delete_Returns400_WhenTeamNotFound()
+    public async Task Delete_Returns404_WhenTeamNotFound()
     {
         AsAdmin();
-        _factory.TeamRepository.GetByIdAsync(999).Returns((Team?)null);
+        _factory.TeamService.DeleteTeamAsync(999, TournamentId)
+            .Returns(Task.FromException(new NotFoundException("Team 999 not found")));
 
         var response = await _client.DeleteAsync(TeamUrl(999));
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Delete_Returns400_WhenTeamBelongsToDifferentTournament()
+    public async Task Delete_Returns404_WhenTeamBelongsToDifferentTournament()
     {
         AsAdmin();
-        _factory.TeamRepository.GetByIdAsync(5).Returns(MakeTeam(5, tournamentId: 99));
+        _factory.TeamService.DeleteTeamAsync(5, TournamentId)
+            .Returns(Task.FromException(new NotFoundException("Team 5 not found in tournament 1")));
 
         var response = await _client.DeleteAsync(TeamUrl(5, TournamentId));
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Delete_Returns403_WhenNotAdmin()
+    public async Task Delete_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
 
         var response = await _client.DeleteAsync(TeamUrl(1));
 

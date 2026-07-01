@@ -15,6 +15,8 @@ namespace WebAPI.Tests.Endpoints;
 using Persistence.Model;
 using Persistence.QueryResult;
 
+using Shared.Exceptions;
+
 public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
@@ -27,9 +29,10 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
         _client = factory.CreateClient();
     }
 
-    private void AsAdmin()        => _factory.TestAuth.Roles = [Settings.KeycloakAdminRoleName];
-    private void AsUser()         => _factory.TestAuth.Roles = [Settings.KeycloakUserRoleName];
-    private void AsUnauthenticated() => _factory.TestAuth.IsAuthenticated = false;
+    private void AsAdmin()            => _factory.TestAuth.Roles = [Settings.KeycloakAdminRoleName];
+    private void AsUser()             => _factory.TestAuth.Roles = [Settings.KeycloakUserRoleName];
+    private void AsUnauthenticated()  => _factory.TestAuth.IsAuthenticated = false;
+    private void AsMissingRole()      => _factory.TestAuth.Roles = [];
 
     // ─── GET /api/tournament ────────────────────────────────────────────────
 
@@ -39,10 +42,10 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
         AsUser();
         var overviews = new List<TournamentOverview>
         {
-            new(1, "Spring Cup",  123, new DateOnly(2024, 3,  1), null,                   4, 2, 1),
-            new(2, "Summer Open", null, new DateOnly(2024, 7, 1), new DateOnly(2024, 7, 7), 8, 0, 0),
+            new(1, "Spring Cup",  "12345", new DateOnly(2024, 3,  1), null,                   4, 2, 1),
+            new(2, "Summer Open", "23456", new DateOnly(2024, 7, 1), new DateOnly(2024, 7, 7), 8, 0, 0),
         };
-        _factory.TournamentRepository.GetTournamentOverviewsAsync().Returns(overviews);
+        _factory.TournamentService.GetTournamentOverviewsAsync().Returns(overviews);
 
         var response = await _client.GetAsync("/api/tournament");
 
@@ -65,7 +68,7 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task GetAll_Returns403_WhenMissingRole()
     {
-        _factory.TestAuth.Roles = []; // authenticated but no role
+        AsMissingRole(); // authenticated but no role
 
         var response = await _client.GetAsync("/api/tournament");
 
@@ -78,8 +81,8 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task GetById_ReturnsOk_WhenExists()
     {
         AsUser();
-        var tournament = new Tournament { Id = 1, Description = "Spring Cup", From = new DateOnly(2024, 3, 1) };
-        _factory.TournamentRepository.GetByIdAsync(1).Returns(tournament);
+        var tournament = new Tournament { Id = 1, Description = "Spring Cup", From = new DateOnly(2024, 3, 1), RegistrationPin = "12345" };
+        _factory.TournamentService.SingleTournamentAsync(1).Returns(tournament);
 
         var response = await _client.GetAsync("/api/tournament/1");
 
@@ -93,7 +96,8 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task GetById_Returns404_WhenNotFound()
     {
         AsUser();
-        _factory.TournamentRepository.GetByIdAsync(999).Returns((Tournament?)null);
+        _factory.TournamentService.SingleTournamentAsync(999)
+            .Returns(Task.FromException<Tournament>(new NotFoundException("Tournament 999 not found")));
 
         var response = await _client.GetAsync("/api/tournament/999");
 
@@ -116,13 +120,10 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task Create_Returns201_WhenValidRequest()
     {
         AsAdmin();
-        var dto     = new TournamentDto(0, "New Cup", new DateOnly(2025, 1, 1), null, null);
-        var created = new Tournament { Id = 1, Description = "New Cup", From = new DateOnly(2025, 1, 1) };
+        var dto     = new TournamentDto(0, "New Cup", new DateOnly(2025, 1, 1), null, "54321");
+        var created = new Tournament { Id = 1, Description = "New Cup", From = new DateOnly(2025, 1, 1), RegistrationPin = "54321" };
 
-        _ = _factory.TournamentRepository
-            .AddAsync(Arg.Do<Tournament>(t => t.Id = 1));
-        _factory.TournamentRepository
-            .GetByIdAsync(1).Returns(created);
+        _factory.TournamentService.AddTournamentAsync(Arg.Any<Tournament>()).Returns(created);
 
         var response = await _client.PostAsJsonAsync("/api/tournament", dto);
 
@@ -135,7 +136,7 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task Create_Returns400_WhenIdNotZero()
     {
         AsAdmin();
-        var dto = new TournamentDto(5, "New Cup", new DateOnly(2025, 1, 1), null, null);
+        var dto = new TournamentDto(5, "New Cup", new DateOnly(2025, 1, 1), null, "54321");
 
         var response = await _client.PostAsJsonAsync("/api/tournament", dto);
 
@@ -146,7 +147,7 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task Create_Returns400_WhenDescriptionEmpty()
     {
         AsAdmin();
-        var dto = new TournamentDto(0, "", new DateOnly(2025, 1, 1), null, null);
+        var dto = new TournamentDto(0, "", new DateOnly(2025, 1, 1), null, "54321");
 
         var response = await _client.PostAsJsonAsync("/api/tournament", dto);
 
@@ -154,10 +155,10 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     }
 
     [Fact]
-    public async Task Create_Returns403_WhenNotAdmin()
+    public async Task Create_Returns403_WhenMissingRole()
     {
-        AsUser();
-        var dto = new TournamentDto(0, "New Cup", new DateOnly(2025, 1, 1), null, null);
+        AsMissingRole();
+        var dto = new TournamentDto(0, "New Cup", new DateOnly(2025, 1, 1), null, "54321");
 
         var response = await _client.PostAsJsonAsync("/api/tournament", dto);
 
@@ -168,7 +169,7 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task Create_Returns401_WhenNotAuthenticated()
     {
         AsUnauthenticated();
-        var dto = new TournamentDto(0, "New Cup", new DateOnly(2025, 1, 1), null, null);
+        var dto = new TournamentDto(0, "New Cup", new DateOnly(2025, 1, 1), null, "54321");
 
         var response = await _client.PostAsJsonAsync("/api/tournament", dto);
 
@@ -181,20 +182,19 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task Update_Returns204_WhenValid()
     {
         AsAdmin();
-        var entity = new Tournament { Id = 1, Description = "Old Name", From = new DateOnly(2024, 1, 1) };
-        _factory.TournamentRepository.GetByIdAsync(1).Returns(entity);
-        var dto = new TournamentDto(1, "Updated Name", new DateOnly(2024, 1, 1), null, null);
+        var dto = new TournamentDto(1, "Updated Name", new DateOnly(2024, 1, 1), null, "54321");
 
         var response = await _client.PutAsJsonAsync("/api/tournament/1", dto);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.TournamentService.Received(1).UpdateTournamentAsync(1, Arg.Any<Tournament>());
     }
 
     [Fact]
     public async Task Update_Returns400_WhenIdMismatch()
     {
         AsAdmin();
-        var dto = new TournamentDto(2, "Updated", new DateOnly(2024, 1, 1), null, null);
+        var dto = new TournamentDto(2, "Updated", new DateOnly(2024, 1, 1), null, "54321");
 
         var response = await _client.PutAsJsonAsync("/api/tournament/1", dto);
 
@@ -202,22 +202,23 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     }
 
     [Fact]
-    public async Task Update_Returns400_WhenTournamentNotFound()
+    public async Task Update_Returns404_WhenTournamentNotFound()
     {
         AsAdmin();
-        _factory.TournamentRepository.GetByIdAsync(999).Returns((Tournament?)null);
-        var dto = new TournamentDto(999, "Updated", new DateOnly(2024, 1, 1), null, null);
+        _factory.TournamentService.UpdateTournamentAsync(999, Arg.Any<Tournament>())
+            .Returns(Task.FromException(new NotFoundException("Tournament 999 not found")));
+        var dto = new TournamentDto(999, "Updated", new DateOnly(2024, 1, 1), null, "54321");
 
         var response = await _client.PutAsJsonAsync("/api/tournament/999", dto);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Update_Returns400_WhenDescriptionEmpty()
     {
         AsAdmin();
-        var dto = new TournamentDto(1, "", new DateOnly(2024, 1, 1), null, null);
+        var dto = new TournamentDto(1, "", new DateOnly(2024, 1, 1), null, "54321");
 
         var response = await _client.PutAsJsonAsync("/api/tournament/1", dto);
 
@@ -225,10 +226,10 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     }
 
     [Fact]
-    public async Task Update_Returns403_WhenNotAdmin()
+    public async Task Update_Returns403_WhenMissingRole()
     {
-        AsUser();
-        var dto = new TournamentDto(1, "Updated", new DateOnly(2024, 1, 1), null, null);
+        AsMissingRole();
+        var dto = new TournamentDto(1, "Updated", new DateOnly(2024, 1, 1), null, "54321");
 
         var response = await _client.PutAsJsonAsync("/api/tournament/1", dto);
 
@@ -241,29 +242,29 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task Delete_Returns204_WhenExists()
     {
         AsAdmin();
-        var entity = new Tournament { Id = 1, Description = "To delete", From = new DateOnly(2024, 1, 1) };
-        _factory.TournamentRepository.GetByIdAsync(1).Returns(entity);
 
         var response = await _client.DeleteAsync("/api/tournament/1");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await _factory.TournamentService.Received(1).DeleteTournamentAsync(1);
     }
 
     [Fact]
-    public async Task Delete_Returns400_WhenNotFound()
+    public async Task Delete_Returns404_WhenNotFound()
     {
         AsAdmin();
-        _factory.TournamentRepository.GetByIdAsync(999).Returns((Tournament?)null);
+        _factory.TournamentService.DeleteTournamentAsync(999)
+            .Returns(Task.FromException(new NotFoundException("Tournament 999 not found")));
 
         var response = await _client.DeleteAsync("/api/tournament/999");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Delete_Returns403_WhenNotAdmin()
+    public async Task Delete_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
 
         var response = await _client.DeleteAsync("/api/tournament/1");
 
@@ -280,35 +281,28 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // ─── POST /api/tournament/{id}/generate-bracket ──────────────────────────
+    // ─── POST /api/tournament/{id}/generate-schedule ─────────────────────────
 
     private static string GenerateBracketUrl(int id = 1) => $"/api/tournament/{id}/generate-schedule";
 
-    private static Team MakeTeam(int id, int tournamentId = 1) => new()
-    {
-        Id               = id,
-        TournamentId     = tournamentId,
-        Player1          = $"Team {id}",
-        RegistrationDate = new DateTime(2025, 1, 10)
-    };
-
     [Fact]
-    public async Task GenerateBracket_Returns200_WithMatchesFromRepository()
+    public async Task GenerateBracket_Returns200_WithMatchesFromService()
     {
         AsAdmin();
         var tournament = new Tournament
         {
-            Id          = 1,
-            Description = "Spring Cup",
-            From        = new DateOnly(2025, 1, 1),
-            Matches     = new List<Match>
+            Id              = 1,
+            Description     = "Spring Cup",
+            From            = new DateOnly(2025, 1, 1),
+            RegistrationPin = "12345",
+            Matches = new List<Match>
             {
                 new() { Id = 1, TournamentId = 1, Round = 1, No = 1, TeamAId = 1, TeamBId = 2, NextMatchId = 3 },
                 new() { Id = 2, TournamentId = 1, Round = 1, No = 2, TeamAId = 3, TeamBId = 4, NextMatchId = 3 },
                 new() { Id = 3, TournamentId = 1, Round = 2, No = 1 },
             }
         };
-        _factory.TournamentRepository.GenerateMatchSchedule(1).Returns(tournament);
+        _factory.TournamentService.GenerateMatchScheduleAsync(1).Returns(tournament);
 
         var response = await _client.PostAsync(GenerateBracketUrl(), null);
 
@@ -335,7 +329,8 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     public async Task GenerateBracket_Returns404_WhenTournamentNotFound()
     {
         AsAdmin();
-        _factory.TournamentRepository.GetByIdAsync(999).Returns((Tournament?)null);
+        _factory.TournamentService.GenerateMatchScheduleAsync(999)
+            .Returns(Task.FromException<Tournament>(new NotFoundException("Tournament 999 not found")));
 
         var response = await _client.PostAsync(GenerateBracketUrl(999), null);
 
@@ -343,39 +338,35 @@ public class TournamentEndpointsTests : IClassFixture<CustomWebApplicationFactor
     }
 
     [Fact]
-    public async Task GenerateBracket_Returns400_WhenBracketAlreadyExists()
+    public async Task GenerateBracket_Returns422_WhenBracketAlreadyExists()
     {
         AsAdmin();
-        var tournament = new Tournament { Id = 1, Description = "Spring Cup", From = new DateOnly(2025, 1, 1) };
-        _factory.TournamentRepository.GetByIdAsync(1).Returns(tournament);
-        _factory.TournamentRepository.GenerateMatchSchedule(1)
+        _factory.TournamentService.GenerateMatchScheduleAsync(1)
             .Returns(Task.FromException<Tournament>(
-                new InvalidOperationException("Matches already exist for this tournament")));
+                new InvalidTournamentDataException("Matches already exist for this tournament")));
 
         var response = await _client.PostAsync(GenerateBracketUrl(), null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]
-    public async Task GenerateBracket_Returns400_WhenFewerThan2Teams()
+    public async Task GenerateBracket_Returns422_WhenFewerThan2Teams()
     {
         AsAdmin();
-        var tournament = new Tournament { Id = 1, Description = "Spring Cup", From = new DateOnly(2025, 1, 1) };
-        _factory.TournamentRepository.GetByIdAsync(1).Returns(tournament);
-        _factory.TournamentRepository.GenerateMatchSchedule(1)
+        _factory.TournamentService.GenerateMatchScheduleAsync(1)
             .Returns(Task.FromException<Tournament>(
-                new InvalidOperationException("At least 2 teams must be registered before generating a bracket")));
+                new InvalidTournamentDataException("At least 2 teams must be registered before generating a bracket")));
 
         var response = await _client.PostAsync(GenerateBracketUrl(), null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]
-    public async Task GenerateBracket_Returns403_WhenNotAdmin()
+    public async Task GenerateBracket_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
 
         var response = await _client.PostAsync(GenerateBracketUrl(), null);
 

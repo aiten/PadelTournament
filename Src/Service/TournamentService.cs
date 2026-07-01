@@ -378,7 +378,7 @@ public class TournamentService : ITournamentService
         bool alreadyStarted = await _uow.Matches
             .AnyMatchesInTournamentAsync(tournament.Id);
         if (alreadyStarted)
-            throw new InvalidTournamentDataException($"Tournament '{name}' is already started");
+            throw new InvalidTournamentDataException($"Tournament '{tournament.Description}' is already started");
 
         var slashIdx = name.IndexOf('/');
         var player1  = slashIdx >= 0 ? name[..slashIdx].Trim() : name.Trim();
@@ -387,7 +387,7 @@ public class TournamentService : ITournamentService
 
         bool alreadyRegistered = await _uow.Teams.AnyPlayerAsync(tournament.Id, player1, player2);
         if (alreadyRegistered)
-            throw new InvalidTournamentDataException($"Team '{name}' is already registered for this tournament");
+            throw new InvalidTournamentDataException($"Team '{name}' is already registered for this tournament ({tournament.Description})");
 
         var registration = new Team
         {

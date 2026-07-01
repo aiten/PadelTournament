@@ -77,10 +77,12 @@ public static class MatchEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        /*
         var routeAdmin = app
             .MapGroup($"{baseRoute}/{{tournamentId:int}}/matches")
             .WithTags("Matches")
             .RequireAuthorization(Settings.AdminPolicyName);
+        */
 
         routeUser.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
             {

@@ -13,6 +13,8 @@ namespace WebAPI.Tests.Endpoints;
 using Persistence.Model;
 using Persistence.QueryResult;
 
+using Shared.Exceptions;
+
 public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
@@ -31,6 +33,7 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     private void AsAdmin()           => _factory.TestAuth.Roles = [Settings.KeycloakAdminRoleName];
     private void AsUser()            => _factory.TestAuth.Roles = [Settings.KeycloakUserRoleName];
     private void AsUnauthenticated() => _factory.TestAuth.IsAuthenticated = false;
+    private void AsMissingRole()     => _factory.TestAuth.Roles = [];
 
     private static string ResultUrl(int matchId = MatchId, int tournamentId = TournamentId) =>
         $"/api/tournament/{tournamentId}/matches/{matchId}/result";
@@ -71,8 +74,8 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Get_ReturnsOk_WhenMatchExistsWithResult()
     {
         AsUser();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId));
-        _factory.MatchRepository.GetMatchResultAsync(MatchId).Returns(MakeMatchResult());
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId));
+        _factory.MatchService.GetMatchResultAsync(MatchId).Returns(MakeMatchResult());
 
         var response = await _client.GetAsync(ResultUrl());
 
@@ -90,14 +93,14 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Get_ReturnsOkWithTieBreak_WhenSetHasTieBreak()
     {
         AsUser();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId));
         var overview = new MatchResultOverview(
             MatchId, "Team A", "Team B", MatchResult.WonA,
             new List<SetResultOverview>
             {
                 new(1, 7, 6, 5, new List<GameResultOverview>()),
             });
-        _factory.MatchRepository.GetMatchResultAsync(MatchId).Returns(overview);
+        _factory.MatchService.GetMatchResultAsync(MatchId).Returns(overview);
 
         var response = await _client.GetAsync(ResultUrl());
 
@@ -110,8 +113,8 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Get_ReturnsOkWithNullResult_WhenMatchHasNoResult()
     {
         AsUser();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId));
-        _factory.MatchRepository.GetMatchResultAsync(MatchId).Returns(MakeMatchResult(result: null));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId));
+        _factory.MatchService.GetMatchResultAsync(MatchId).Returns(MakeMatchResult(result: null));
 
         var response = await _client.GetAsync(ResultUrl());
 
@@ -124,7 +127,8 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Get_Returns404_WhenMatchNotFound()
     {
         AsUser();
-        _factory.MatchRepository.GetByIdAsync(999).Returns((Match?)null);
+        _factory.MatchService.SingleMatchAsync(999)
+            .Returns(Task.FromException<Match>(new NotFoundException("Match 999 not found")));
 
         var response = await _client.GetAsync(ResultUrl(matchId: 999));
 
@@ -132,14 +136,14 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     }
 
     [Fact]
-    public async Task Get_Returns404_WhenMatchBelongsToDifferentTournament()
+    public async Task Get_Returns400_WhenMatchBelongsToDifferentTournament()
     {
         AsUser();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId, tournamentId: 99));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId, tournamentId: 99));
 
         var response = await _client.GetAsync(ResultUrl(matchId: MatchId, tournamentId: TournamentId));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -155,7 +159,7 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     [Fact]
     public async Task Get_Returns403_WhenMissingRole()
     {
-        _factory.TestAuth.Roles = [];
+        AsMissingRole();
 
         var response = await _client.GetAsync(ResultUrl());
 
@@ -179,19 +183,19 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Put_Returns204_WhenAdminUpdatesResult()
     {
         AsAdmin();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId));
 
         var response = await _client.PutAsJsonAsync(ResultUrl(), MakeResultDto());
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        await _factory.MatchRepository.Received(1).UpdateMatchResultAsync(Arg.Is(MatchId), Arg.Any<MatchResultOverview>());
+        await _factory.MatchService.Received(1).UpdateMatchResultAsync(Arg.Is(MatchId), Arg.Any<MatchResultOverview>());
     }
 
     [Fact]
     public async Task Put_UpdatesCorrectSets_WhenResultHasTieBreak()
     {
         AsAdmin();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId));
         var dto = new MatchResultDto(
             MatchId, "WonA",
             new List<SetResultDto>
@@ -201,7 +205,7 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
         );
 
         MatchResultOverview? captured = null;
-        await _factory.MatchRepository.UpdateMatchResultAsync(
+        await _factory.MatchService.UpdateMatchResultAsync(
             Arg.Any<int>(),
             Arg.Do<MatchResultOverview>(r => captured = r));
 
@@ -217,7 +221,8 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Put_Returns404_WhenMatchNotFound()
     {
         AsAdmin();
-        _factory.MatchRepository.GetByIdAsync(999).Returns((Match?)null);
+        _factory.MatchService.SingleMatchAsync(999)
+            .Returns(Task.FromException<Match>(new NotFoundException("Match 999 not found")));
 
         var response = await _client.PutAsJsonAsync(ResultUrl(matchId: 999), MakeResultDto());
 
@@ -225,20 +230,20 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     }
 
     [Fact]
-    public async Task Put_Returns404_WhenMatchBelongsToDifferentTournament()
+    public async Task Put_Returns400_WhenMatchBelongsToDifferentTournament()
     {
         AsAdmin();
-        _factory.MatchRepository.GetByIdAsync(MatchId).Returns(MakeMatch(MatchId, tournamentId: 99));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId, tournamentId: 99));
 
         var response = await _client.PutAsJsonAsync(ResultUrl(matchId: MatchId, tournamentId: TournamentId), MakeResultDto());
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Put_Returns403_WhenNotAdmin()
+    public async Task Put_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
 
         var response = await _client.PutAsJsonAsync(ResultUrl(), MakeResultDto());
 
@@ -261,21 +266,20 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     public async Task Delete_Returns204_WhenAdminDeletesResult()
     {
         AsAdmin();
-        var match = MakeMatch(MatchId);
-        match.Sets.Add(new Set { Id = 1, MatchId = MatchId });
-        _factory.MatchRepository.GetByIdAsync(MatchId, nameof(Match.Sets)).Returns(match);
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId));
 
         var response = await _client.DeleteAsync(ResultUrl());
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        match.Sets.Should().BeEmpty();
+        await _factory.MatchService.Received(1).DeleteMatchResultAsync(MatchId);
     }
 
     [Fact]
     public async Task Delete_Returns404_WhenMatchNotFound()
     {
         AsAdmin();
-        _factory.MatchRepository.GetByIdAsync(999, nameof(Match.Sets)).Returns((Match?)null);
+        _factory.MatchService.SingleMatchAsync(999)
+            .Returns(Task.FromException<Match>(new NotFoundException("Match 999 not found")));
 
         var response = await _client.DeleteAsync(ResultUrl(matchId: 999));
 
@@ -283,21 +287,20 @@ public class MatchResultEndpointsTests : IClassFixture<CustomWebApplicationFacto
     }
 
     [Fact]
-    public async Task Delete_Returns404_WhenMatchBelongsToDifferentTournament()
+    public async Task Delete_Returns400_WhenMatchBelongsToDifferentTournament()
     {
         AsAdmin();
-        _factory.MatchRepository.GetByIdAsync(MatchId, nameof(Match.Sets))
-                                .Returns(MakeMatch(MatchId, tournamentId: 99));
+        _factory.MatchService.SingleMatchAsync(MatchId).Returns(MakeMatch(MatchId, tournamentId: 99));
 
         var response = await _client.DeleteAsync(ResultUrl(matchId: MatchId, tournamentId: TournamentId));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Delete_Returns403_WhenNotAdmin()
+    public async Task Delete_Returns403_WhenMissingRole()
     {
-        AsUser();
+        AsMissingRole();
 
         var response = await _client.DeleteAsync(ResultUrl());
 
