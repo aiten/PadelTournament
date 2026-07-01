@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using Persistence.Model;
 using Persistence.QueryResult;
 
+using Shared.Exceptions;
+
 public interface IMatchRepository : IGenericRepository<Match>
 {
     Task<bool> AnyMatchesInTournamentAsync(int tournamentId);
@@ -35,7 +37,7 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
 
     public async Task<bool> AnyMatchesInTournamentAsync(int tournamentId)
     {
-        return await DbSet.AnyAsync(m => m.TournamentId == tournamentId);
+        return await DbSet.IgnoreQueryFilters().AnyAsync(m => m.TournamentId == tournamentId);
     }
 
     public async Task<IList<Match>> GetByTournamentAsync(int tournamentId)
@@ -51,6 +53,7 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
     public async Task<IList<Match>> GetByTeamAsync(int teamId)
     {
         return await _dbContext.Matches
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(m => m.TeamAId == teamId || m.TeamBId == teamId)
             .OrderBy(m => m.Round)
@@ -87,7 +90,7 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
 
         if (match is null)
         {
-            throw new InvalidOperationException($"Match not found! {matchId}");
+            throw new NotFoundException($"Match not found! {matchId}");
         }
 
         var toDb = result.SetResults.Select(set => new Set()

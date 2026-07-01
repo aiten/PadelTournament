@@ -29,9 +29,6 @@ public class TenantMiddleware
         // 2. Async Rollen-/Rechteprüfung
         var isGlobalAdmin = await userService.IsAdminAsync();
 
-        //fix: not login => isadmin
-        isGlobalAdmin = isGlobalAdmin || tenantId is null; 
-
         // 3. Kontext setzen
         tenantContext.Initialize(tenantId, isGlobalAdmin);
 

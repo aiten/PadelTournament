@@ -31,6 +31,7 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
     public async Task<Team?> GetByRegistrationAsync(string pin, string registrationCode)
     {
         return await DbSet
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Include(t => t.Tournament)
             .Where(t => t.RegistrationCode == registrationCode && t.Tournament.RegistrationPin == pin)
@@ -39,11 +40,11 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
 
     public async Task<bool> AnyPlayerAsync(int tournamentId, string player1, string? player2)
     {
-        return await DbSet.AnyAsync(t => t.TournamentId == tournamentId && t.Player1 == player1 && t.Player2 == player2);
+        return await DbSet.IgnoreQueryFilters().AnyAsync(t => t.TournamentId == tournamentId && t.Player1 == player1 && t.Player2 == player2);
     }
 
     public async Task<bool> AnyRegistrationCodeAsync(int tournamentId, string code)
     {
-        return await DbSet.AnyAsync(t => t.TournamentId == tournamentId && t.RegistrationCode == code);
+        return await DbSet.IgnoreQueryFilters().AnyAsync(t => t.TournamentId == tournamentId && t.RegistrationCode == code);
     }
 }
