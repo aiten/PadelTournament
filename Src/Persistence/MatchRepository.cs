@@ -24,6 +24,8 @@ public interface IMatchRepository : IGenericRepository<Match>
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
     Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result);
+
+    Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties);
 }
 
 public class MatchRepository : GenericRepository<Match>, IMatchRepository
@@ -49,6 +51,23 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
             .OrderBy(m => m.Round)
             .ThenBy(m => m.No)
             .ToListAsync();
+    }
+
+    public async Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties)
+    {
+        var query = DbSet
+            .IgnoreQueryFilters();
+
+        if (includeProperties != null)
+        {
+            foreach (string includeProperty in includeProperties!)
+            {
+                query = query.Include(includeProperty);
+            }
+        }
+
+        return await query
+            .FirstOrDefaultAsync(m => m.Id == matchId);
     }
 
     public async Task<MatchResultOverview?> GetMatchResultAsync(int matchId)
