@@ -13,7 +13,7 @@ public class HubNotificationService(
     IHubContext<PublicHub, IPublicHubClient>         publicHubContext) : IHubNotificationService
 {
     public Task NotifyTournamentUpdatedAsync(int tournamentId) =>
-        hubContext.Clients.All.TournamentUpdated(tournamentId);
+        hubContext.Clients.Group($"tournament-{tournamentId}").TournamentUpdated(tournamentId);
 
     public Task NotifyTournamentMatchUpdatedAsync(string pin) =>
         publicHubContext.Clients.Group($"pin-{pin}").TournamentMatchUpdated(pin);
