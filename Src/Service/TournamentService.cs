@@ -119,7 +119,7 @@ public class TournamentService : ITournamentService
 
     #endregion
 
-    #region Genrate Schedule
+    #region Generate Schedule
 
     public async Task<Tournament> GenerateMatchScheduleAsync(int tournamentId)
     {
@@ -206,9 +206,9 @@ public class TournamentService : ITournamentService
             }
 
             matchPos--;
-            if (teams.ContainsKey(matchPos))
+            if (teams.TryGetValue(matchPos, out Team? value))
             {
-                throw new InvalidTournamentDataException($"The start-match-pos is specified twice Team: {team.Name} / {teams[matchPos].Name}");
+                throw new InvalidTournamentDataException($"The start-match-pos is specified twice Team: {team.Name} / {value.Name}");
             }
 
             teams[matchPos] = team;
@@ -218,9 +218,9 @@ public class TournamentService : ITournamentService
         foreach (var team in tournament.Teams.Where(t => t.StartMatchPos is null && t.Seed is not null).OrderBy(t => t.Seed))
         {
             int matchPos = seeds[idx++] - 1;
-            if (teams.ContainsKey(matchPos))
+            if (teams.TryGetValue(matchPos, out Team? value))
             {
-                throw new InvalidTournamentDataException($"The seed position is occupied by a start-match-pos Team: {team.Name} / {teams[matchPos].Name}");
+                throw new InvalidTournamentDataException($"The seed position is occupied by a start-match-pos Team: {team.Name} / {value.Name}");
             }
 
             teams[matchPos] = team;
@@ -330,8 +330,6 @@ public class TournamentService : ITournamentService
         }
     }
 
-    #endregion
-
     #region Schedule Helper
 
     public async Task DeleteMatchScheduleAsync(int tournamentId)
@@ -350,11 +348,13 @@ public class TournamentService : ITournamentService
         do
         {
             code = rng.Next(10000, 100000).ToString();
-        } while (await _uow.Tournaments.AnyRegistrationPinAsync(code));
+        } while (await _uow.Tournaments.AnyRegistrationPinNoTenantAsync(code));
 
         return code;
     }
 
+
+    #endregion
 
     #endregion
 
@@ -368,7 +368,7 @@ public class TournamentService : ITournamentService
 
     public async Task<Team> RegisterTeamByPinAsync(string name, string pin)
     {
-        var tournament = await _uow.Tournaments.GetByPinAsync(pin, true,true) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
+        var tournament = await _uow.Tournaments.GetByPinNoTenantAsync(pin, true,true) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
 
         return await RegisterTeamAsync(tournament, name, null, null, true);
     }
@@ -425,6 +425,10 @@ public class TournamentService : ITournamentService
 
         return result;
     }
+    public async Task<Tournament> SingleTournamentByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
+    {
+        return await _uow.Tournaments.GetByPinNoTenantAsync(pin, loadTeams, loadMatches) ?? throw new NotFoundException($"No Tournament found with Pin {pin}");
+    }
 
     private async Task<string> GenerateUniqueRegistrationCodeAsync(int tournamentId)
     {
@@ -433,14 +437,9 @@ public class TournamentService : ITournamentService
         do
         {
             code = rng.Next(10000, 100000).ToString();
-        } while (await _uow.Teams.AnyRegistrationCodePublicAsync(tournamentId, code));
+        } while (await _uow.Teams.AnyRegistrationCodeNoTenantAsync(tournamentId, code));
 
         return code;
-    }
-
-    public async Task<Tournament> SingleTournamentByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
-    {
-        return await _uow.Tournaments.GetByPinAsync(pin, loadTeams, loadMatches) ?? throw new NotFoundException($"No Tournament found with Pin {pin}");
     }
 
     #endregion

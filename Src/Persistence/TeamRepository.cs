@@ -13,9 +13,9 @@ using Persistence.Model;
 
 public interface ITeamRepository : IGenericRepository<Team>
 {
-    Task<Team?> GetByRegistrationAsync(string      pin,          string registrationCode);
+    Task<Team?> GetByRegistrationNoTenantAsync(string      pin,          string registrationCode);
 
-    Task<bool>  AnyRegistrationCodePublicAsync(int tournamentId, string code);
+    Task<bool>  AnyRegistrationCodeNoTenantAsync(int tournamentId, string code);
 }
 
 public class TeamRepository : GenericRepository<Team>, ITeamRepository
@@ -27,7 +27,7 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Team?> GetByRegistrationAsync(string pin, string registrationCode)
+    public async Task<Team?> GetByRegistrationNoTenantAsync(string pin, string registrationCode)
     {
         return await DbSet
             .IgnoreQueryFilters()
@@ -37,9 +37,11 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<bool> AnyRegistrationCodePublicAsync(int tournamentId, string code)
+    public async Task<bool> AnyRegistrationCodeNoTenantAsync(int tournamentId, string code)
     {
-        return await DbSet.IgnoreQueryFilters().AnyAsync(t => t.TournamentId == tournamentId && t.RegistrationCode == code);
+        return await DbSet
+            .IgnoreQueryFilters()
+            .AnyAsync(t => t.TournamentId == tournamentId && t.RegistrationCode == code);
     }
 
 }

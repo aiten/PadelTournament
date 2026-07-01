@@ -54,7 +54,7 @@ public class MatchService : IMatchService
 
     public async Task<Match> SingleMatchForTeamAsync(int matchId, int teamId)
     {
-        var match = await _uow.Matches.GetMatchForPublicAsync(matchId) ?? throw new NotFoundException("Match with id {matchId} not found");
+        var match = await _uow.Matches.GetByIdNoTenantAsync(matchId) ?? throw new NotFoundException("Match with id {matchId} not found");
         if (match.TeamAId != teamId && match.TeamBId != teamId)
         {
             throw new NotFoundException($"Match {matchId} not found for team {teamId}");
@@ -178,7 +178,7 @@ public class MatchService : IMatchService
 
     private async Task<Match> GetActiveMatchAsync(int matchId)
     {
-        var match = await _uow.Matches.GetMatchForPublicAsync(matchId, nameof(Match.NextMatch), nameof(Match.Tournament));
+        var match = await _uow.Matches.GetByIdNoTenantAsync(matchId, nameof(Match.NextMatch), nameof(Match.Tournament));
         if (match is null)
         {
             throw new NotFoundException($"Match not found! {matchId}");

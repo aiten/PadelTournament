@@ -22,9 +22,9 @@ public interface IMatchRepository : IGenericRepository<Match>
     Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result);
 
     // no Tenant
-    Task<IList<Match>> GetByTeamPublicAsync(int teamId);
+    Task<IList<Match>> GetByTeamNoTenantAsync(int teamId);
 
-    Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties);
+    Task<Match?> GetByIdNoTenantAsync(int matchId, params string[]? includeProperties);
 
 }
 
@@ -101,9 +101,9 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
 
     #region NoTenant
 
-    public async Task<IList<Match>> GetByTeamPublicAsync(int teamId)
+    public async Task<IList<Match>> GetByTeamNoTenantAsync(int teamId)
     {
-        return await _dbContext.Matches
+        return await DbSet
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(m => m.TeamAId == teamId || m.TeamBId == teamId)
@@ -112,9 +112,9 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
             .ToListAsync();
     }
 
-    public async Task<Match?> GetMatchForPublicAsync(int matchId, params string[]? includeProperties)
+    public async Task<Match?> GetByIdNoTenantAsync(int matchId, params string[]? includeProperties)
     {
-        var query = _dbContext.Matches
+        var query = DbSet
             .IgnoreQueryFilters();
 
         if (includeProperties != null)

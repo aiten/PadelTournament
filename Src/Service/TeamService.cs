@@ -101,13 +101,13 @@ public class TeamService : ITeamService
 
     public async Task<Team> SingleByRegistrationAsync(string pin, string registrationCode)
     {
-        var team = await _uow.Teams.GetByRegistrationAsync(pin, registrationCode);
+        var team = await _uow.Teams.GetByRegistrationNoTenantAsync(pin, registrationCode);
         return team ?? throw new NotFoundException("No team found for the given pin and registration code");
     }
 
     public async Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId)
     {
         //public => no check for tournament ownership, as this is used for match details which are public
-        return await _uow.Matches.GetByTeamPublicAsync(teamId);
+        return await _uow.Matches.GetByTeamNoTenantAsync(teamId);
     }
 }

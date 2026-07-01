@@ -19,9 +19,9 @@ public interface ITournamentRepository : IGenericRepository<Tournament>
 
     // No Tenant
 
-    Task<Tournament?> GetByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false);
+    Task<Tournament?> GetByPinNoTenantAsync(string pin, bool loadTeams = false, bool loadMatches = false);
 
-    Task<bool> AnyRegistrationPinAsync(string pin);
+    Task<bool> AnyRegistrationPinNoTenantAsync(string pin);
 
 }
 
@@ -55,9 +55,12 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
 
     #region NoTenant
 
-    public async Task<Tournament?> GetByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
+    public async Task<Tournament?> GetByPinNoTenantAsync(string pin, bool loadTeams = false, bool loadMatches = false)
     {
-        var query = _dbContext.Tournaments.IgnoreQueryFilters().Where(t => t.RegistrationPin == pin);
+        var query = DbSet
+            .IgnoreQueryFilters()
+            .Where(t => t.RegistrationPin == pin);
+
         if (loadTeams)
         {
             query = query.Include(t => t.Teams);
@@ -71,9 +74,12 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<bool> AnyRegistrationPinAsync(string pin)
+    public async Task<bool> AnyRegistrationPinNoTenantAsync(string pin)
     {
-        return await _dbContext.Tournaments.IgnoreQueryFilters().AnyAsync(t => t.RegistrationPin == pin);
+        return await DbSet
+            .IgnoreQueryFilters()
+            .AnyAsync(t => t.RegistrationPin == pin);
     }
+
     #endregion
 }
