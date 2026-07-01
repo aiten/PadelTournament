@@ -19,8 +19,6 @@ public interface IMatchRepository : IGenericRepository<Match>
 {
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
-    Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result);
-
     // no Tenant
     Task<IList<Match>> GetByTeamNoTenantAsync(int teamId);
 
@@ -58,45 +56,6 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
                 )).ToList()
             ))
             .SingleOrDefaultAsync();
-    }
-
-    public async Task<Match> UpdateMatchResultAsync(int matchId, MatchResultOverview result)
-    {
-        var match = await GetByIdAsync(matchId, nameof(Match.Sets), $"{nameof(Match.Sets)}.{nameof(Set.Games)}", nameof(Match.Tournament));
-
-        if (match is null)
-        {
-            throw new NotFoundException($"Match not found! {matchId}");
-        }
-
-        var toDb = result.SetResults.Select(set => new Set()
-        {
-            No             = set.No,
-            ScoreA         = set.ScoreA,
-            ScoreB         = set.ScoreB,
-            TieBreakPoints = set.TieBreakPoints,
-            Games = set.GameResults.Select(game => new Game()
-            {
-                No     = game.No,
-                Server = game.Server,
-                Points = game.Points
-            }).ToList()
-        }).ToList();
-
-        match.Sets.Sync(toDb, s => s.No, (sDb, sDto) =>
-        {
-            sDb.ScoreA         = sDto.ScoreA;
-            sDb.ScoreB         = sDto.ScoreB;
-            sDb.TieBreakPoints = sDto.TieBreakPoints;
-
-            sDb.Games.Sync(sDto.Games, g => g.No, (gDb, gDto) =>
-            {
-                gDb.Points = gDto.Points;
-                gDb.Server = gDto.Server;
-            });
-        });
-
-        return match;
     }
 
     #region NoTenant

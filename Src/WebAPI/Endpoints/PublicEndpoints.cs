@@ -12,15 +12,48 @@ using Microsoft.AspNetCore.Routing;
 
 using Persistence;
 using Persistence.Model;
+using Persistence.QueryResult;
 
 using Service;
 
 using Shared.Exceptions;
 
-public record PublicMatchResultDto(bool Won);
+using WebAPI.Filters;
+
+public record PublicMatchResultDto(bool Won, string? Result = null);
 
 public static class PublicEndpoints
 {
+    // Parses a comma-separated set score list, e.g. "6:4, 6:3, 6:5(2)", into set results.
+    private static List<SetResultOverview>? ParseSets(string? result)
+    {
+        if (string.IsNullOrEmpty(result))
+        {
+            return null;
+        }
+
+        return result.Split(',')
+            .Select((setScore, index) =>
+            {
+                var  col         = setScore.Trim().Split('-', ':');
+                int? tieBreak    = null;
+                int  tieBreakIdx = col[1].IndexOf('(');
+                if (tieBreakIdx != -1)
+                {
+                    tieBreak = int.Parse(col[1].Substring(tieBreakIdx + 1, col[1].IndexOf(')') - tieBreakIdx - 1));
+                    col[1]   = col[1].Substring(0, tieBreakIdx);
+                }
+
+                return new SetResultOverview(
+                    index + 1,
+                    int.Parse(col[0]),
+                    int.Parse(col[1]),
+                    tieBreak,
+                    new List<GameResultOverview>());
+            })
+            .ToList();
+    }
+
     public static void MapPublicEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
         var routeTeam = app
@@ -73,12 +106,14 @@ public static class PublicEndpoints
                     : (dto.Won ? MatchResult.WonB : MatchResult.WonA);
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
-                await matchService.AcceptResultAsync(matchId, isForA, winner);
+                await matchService.AcceptResultAsync(matchId, isForA, winner, ParseSets(dto.Result));
+
                 await trans.CommitTransactionAsync();
 
                 return Results.NoContent();
             })
             .WithName("ReportPublicMatchResult")
+            .WithValidation<PublicMatchResultDto>()
             .RequireRateLimiting("public-lookup")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)

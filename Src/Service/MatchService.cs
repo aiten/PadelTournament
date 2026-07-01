@@ -1,5 +1,9 @@
 ﻿namespace Service;
 
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
 using Microsoft.Extensions.Logging;
 
 using Persistence;
@@ -9,6 +13,8 @@ using Persistence.QueryResult;
 using Shared.Exceptions;
 
 using System.Threading.Tasks;
+
+using Base.Persistence;
 
 public interface IMatchService
 {
@@ -24,7 +30,7 @@ public interface IMatchService
 
     Task SetWinnerAsync(int matchId, MatchResult winner);
 
-    Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result);
+    Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result, IList<SetResultOverview>? sets);
 }
 
 public class MatchService : IMatchService
@@ -81,10 +87,49 @@ public class MatchService : IMatchService
 
     public async Task UpdateMatchResultAsync(int matchId, MatchResultOverview result)
     {
-        var match = await _uow.Matches.UpdateMatchResultAsync(matchId, result);
+        var match = await _uow.Matches.GetByIdNoTenantAsync(matchId, nameof(Match.Sets), $"{nameof(Match.Sets)}.{nameof(Set.Games)}", nameof(Match.Tournament));
+
+        if (match is null)
+        {
+            throw new NotFoundException($"Match not found! {matchId}");
+        }
+
+        UpdateMatchResult(match, result.SetResults.ToList());
 
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+
+    }
+
+    private void UpdateMatchResult(Match match, IList<SetResultOverview> sets)
+        {
+
+        var toDb = sets.Select(set => new Set()
+        {
+            No             = set.No,
+            ScoreA         = set.ScoreA,
+            ScoreB         = set.ScoreB,
+            TieBreakPoints = set.TieBreakPoints,
+            Games = set.GameResults.Select(game => new Game()
+            {
+                No     = game.No,
+                Server = game.Server,
+                Points = game.Points
+            }).ToList()
+        }).ToList();
+
+        match.Sets.Sync(toDb, s => s.No, (sDb, sDto) =>
+        {
+            sDb.ScoreA         = sDto.ScoreA;
+            sDb.ScoreB         = sDto.ScoreB;
+            sDb.TieBreakPoints = sDto.TieBreakPoints;
+
+            sDb.Games.Sync(sDto.Games, g => g.No, (gDb, gDto) =>
+            {
+                gDb.Points = gDto.Points;
+                gDb.Server = gDto.Server;
+            });
+           });
     }
 
     public async Task DeleteMatchResultAsync(int id)
@@ -98,7 +143,7 @@ public class MatchService : IMatchService
     #endregion
 
 
-    public async Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result)
+    public async Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result, IList<SetResultOverview>? sets)
     {
         bool changed = false;
         var  match   = await GetActiveMatchAsync(matchId);
@@ -117,6 +162,11 @@ public class MatchService : IMatchService
         if (match.AcceptA == match.AcceptB)
         {
             changed = await SetWinnerAsync(match, result) || changed;
+        }
+
+        if (sets is not null)
+        {
+            UpdateMatchResult(match, sets);
         }
 
         await _uow.SaveChangesAsync();
@@ -178,7 +228,12 @@ public class MatchService : IMatchService
 
     private async Task<Match> GetActiveMatchAsync(int matchId)
     {
-        var match = await _uow.Matches.GetByIdNoTenantAsync(matchId, nameof(Match.NextMatch), nameof(Match.Tournament));
+        var match = await _uow.Matches.GetByIdNoTenantAsync(matchId,
+            nameof(Match.NextMatch),
+            nameof(Match.Tournament),
+            nameof(Match.Sets),
+            $"{nameof(Match.Sets)}.{nameof(Set.Games)}"
+        );
         if (match is null)
         {
             throw new NotFoundException($"Match not found! {matchId}");
