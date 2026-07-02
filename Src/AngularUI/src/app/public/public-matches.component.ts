@@ -162,7 +162,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
 
     this.signalR.joinTournamentGroup(this.pin);
     this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(msg => {
-      if (msg.pin === this.pin) {
+      if (msg.pin === this.pin && this.isDisplayedMatch(msg.matchId)) {
         this.reloadMatches();
       }
     });
@@ -304,6 +304,10 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
         this.reportError.set(err.error?.detail ?? 'Failed to report result.');
       }
     });
+  }
+
+  private isDisplayedMatch(matchId: number | null): boolean {
+    return matchId === null || this.matches().some(m => m.id === matchId);
   }
 
   private reloadMatches(): void {

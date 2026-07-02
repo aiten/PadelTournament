@@ -98,12 +98,10 @@ public class MatchService : IMatchService
 
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin, match.Id);
-
     }
 
     private void UpdateMatchResult(Match match, IList<SetResultOverview> sets)
-        {
-
+    {
         var toDb = sets.Select(set => new Set()
         {
             No             = set.No,
@@ -129,7 +127,7 @@ public class MatchService : IMatchService
                 gDb.Points = gDto.Points;
                 gDb.Server = gDto.Server;
             });
-           });
+        });
     }
 
     public async Task DeleteMatchResultAsync(int id)
@@ -172,7 +170,7 @@ public class MatchService : IMatchService
         await _uow.SaveChangesAsync();
         if (changed)
         {
-            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin, matchId);
         }
     }
 
@@ -185,7 +183,7 @@ public class MatchService : IMatchService
         await _uow.SaveChangesAsync();
         if (changed)
         {
-            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin, matchId);
         }
     }
 
