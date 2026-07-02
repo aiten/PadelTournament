@@ -10,10 +10,6 @@ function emptySet(): SetScore {
   return { scoreA: 0, scoreB: 0, tieBreak: null };
 }
 
-function isTieBreakSet(s: SetScore): boolean {
-  return Math.max(s.scoreA, s.scoreB) === 7 && Math.abs(s.scoreA - s.scoreB) === 1;
-}
-
 function parseValue(value: string | null): SetScore[] {
   if (!value) return [emptySet()];
 
@@ -32,7 +28,7 @@ function formatValue(sets: SetScore[]): string | null {
   if (!complete.length) return null;
 
   return complete
-    .map(s => `${s.scoreA}:${s.scoreB}${isTieBreakSet(s) && s.tieBreak !== null ? `(${s.tieBreak})` : ''}`)
+    .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreak !== null ? `(${s.tieBreak})` : ''}`)
     .join(', ');
 }
 
@@ -42,13 +38,17 @@ function formatValue(sets: SetScore[]): string | null {
   changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .score-input { display: flex; flex-direction: column; gap: 10px; }
+    .teams-header { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+    .team-col { flex: 1; text-align: center; font-size: .85rem; font-weight: 600; color: #334155;
+                min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sep-spacer { width: 1.2rem; flex: 0 0 auto; }
     .set-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
     .set-card-header { display: flex; justify-content: space-between; align-items: center; }
     .set-title { font-size: .85rem; color: #64748b; font-weight: 600; }
     .remove-btn { border: none; background: none; color: #94a3b8; font-size: 1.1rem; padding: 4px 10px; line-height: 1; }
-    .score-rows { display: flex; flex-direction: column; gap: 6px; }
-    .score-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .team-label { font-size: .9rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .score-row { display: flex; align-items: center; gap: 10px; }
+    .score-col { flex: 1; display: flex; justify-content: center; }
+    .sep { flex: 0 0 auto; width: 1.2rem; text-align: center; font-weight: 700; color: #64748b; font-size: 1.1rem; }
     .stepper { display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
     .stepper-btn { width: 42px; height: 42px; border: none; background: #f1f5f9; font-size: 1.3rem; line-height: 1;
                    color: #334155; touch-action: manipulation; }
@@ -58,13 +58,19 @@ function formatValue(sets: SetScore[]): string | null {
     .tiebreak-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px;
                     padding-top: 6px; border-top: 1px dashed #e2e8f0; }
     .tb-label { font-size: .8rem; color: #64748b; }
-    .stepper-sm .stepper-btn { width: 34px; height: 34px; font-size: 1.05rem; }
-    .stepper-sm .stepper-value { min-width: 2rem; font-size: 1rem; }
+    .tb-link { border: none; background: none; color: #2563eb; font-size: .85rem; padding: 4px 0;
+               text-decoration: underline; margin-left: auto; white-space: nowrap; }
     .set-actions { display: flex; justify-content: center; }
     .add-set-btn { padding: 8px 18px; }
   `],
   template: `
     <div class="score-input">
+      <div class="teams-header">
+        <span class="team-col">{{ teamALabel() }}</span>
+        <span class="sep-spacer"></span>
+        <span class="team-col">{{ teamBLabel() }}</span>
+      </div>
+
       @for (set of sets(); track $index) {
         <div class="set-card">
           <div class="set-card-header">
@@ -74,33 +80,36 @@ function formatValue(sets: SetScore[]): string | null {
             }
           </div>
 
-          <div class="score-rows">
-            <div class="score-row">
-              <span class="team-label">{{ teamALabel() }}</span>
+          <div class="score-row">
+            <div class="score-col">
               <div class="stepper">
                 <button type="button" class="stepper-btn" (click)="dec($index, 'scoreA')" [disabled]="set.scoreA <= 0">−</button>
                 <span class="stepper-value">{{ set.scoreA }}</span>
                 <button type="button" class="stepper-btn" (click)="inc($index, 'scoreA')" [disabled]="set.scoreA >= maxScore()">+</button>
               </div>
             </div>
-            <div class="score-row">
-              <span class="team-label">{{ teamBLabel() }}</span>
+            <span class="sep">:</span>
+            <div class="score-col">
               <div class="stepper">
                 <button type="button" class="stepper-btn" (click)="dec($index, 'scoreB')" [disabled]="set.scoreB <= 0">−</button>
                 <span class="stepper-value">{{ set.scoreB }}</span>
                 <button type="button" class="stepper-btn" (click)="inc($index, 'scoreB')" [disabled]="set.scoreB >= maxScore()">+</button>
               </div>
             </div>
+            @if (!hasTieBreak(set)) {
+              <button type="button" class="tb-link" (click)="addTieBreak($index)">+ Tiebreak</button>
+            }
           </div>
 
-          @if (isTieBreak(set)) {
+          @if (hasTieBreak(set)) {
             <div class="tiebreak-row">
               <span class="tb-label">Tiebreak</span>
-              <div class="stepper stepper-sm">
+              <div class="stepper">
                 <button type="button" class="stepper-btn" (click)="decTieBreak($index)" [disabled]="(set.tieBreak ?? 0) <= 0">−</button>
                 <span class="stepper-value">{{ set.tieBreak ?? 0 }}</span>
                 <button type="button" class="stepper-btn" (click)="incTieBreak($index)" [disabled]="(set.tieBreak ?? 0) >= maxTieBreak()">+</button>
               </div>
+              <button type="button" class="remove-btn" (click)="removeTieBreak($index)" aria-label="Remove tiebreak">✕</button>
             </div>
           }
         </div>
@@ -130,8 +139,18 @@ export class MatchScoreInputComponent implements OnInit {
     this.sets.set(parseValue(this.value()));
   }
 
-  isTieBreak(s: SetScore): boolean {
-    return isTieBreakSet(s);
+  hasTieBreak(s: SetScore): boolean {
+    return s.tieBreak !== null;
+  }
+
+  addTieBreak(index: number): void {
+    const next = this.sets().map((s, i) => i === index ? { ...s, tieBreak: 0 } : s);
+    this.commit(next);
+  }
+
+  removeTieBreak(index: number): void {
+    const next = this.sets().map((s, i) => i === index ? { ...s, tieBreak: null } : s);
+    this.commit(next);
   }
 
   inc(index: number, field: 'scoreA' | 'scoreB'): void {
@@ -161,11 +180,9 @@ export class MatchScoreInputComponent implements OnInit {
   }
 
   private updateScore(index: number, field: 'scoreA' | 'scoreB', delta: number): void {
-    const next = this.sets().map((s, i) => {
-      if (i !== index) return s;
-      const updated = { ...s, [field]: this.clamp(s[field] + delta, 0, this.maxScore()) };
-      return isTieBreakSet(updated) ? updated : { ...updated, tieBreak: null };
-    });
+    const next = this.sets().map((s, i) => i === index
+      ? { ...s, [field]: this.clamp(s[field] + delta, 0, this.maxScore()) }
+      : s);
     this.commit(next);
   }
 

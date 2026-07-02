@@ -15,8 +15,8 @@ public class HubNotificationService(
     public Task NotifyTournamentUpdatedAsync(int tournamentId) =>
         hubContext.Clients.Group($"tournament-{tournamentId}").TournamentUpdated(tournamentId);
 
-    public Task NotifyTournamentMatchUpdatedAsync(string pin) =>
-        publicHubContext.Clients.Group($"pin-{pin}").TournamentMatchUpdated(pin);
+    public Task NotifyTournamentMatchUpdatedAsync(string pin, int? matchId = null) =>
+        publicHubContext.Clients.Group($"pin-{pin}").TournamentMatchUpdated(pin, matchId);
 
     public Task NotifyTournamentTeamUpdatedAsync(string pin) =>
         publicHubContext.Clients.Group($"pin-{pin}").TournamentTeamUpdated(pin);

@@ -5,6 +5,6 @@ namespace Service;
 public interface IHubNotificationService
 {
     Task NotifyTournamentUpdatedAsync(int      tournamentId);
-    Task NotifyTournamentMatchUpdatedAsync(string pin);
+    Task NotifyTournamentMatchUpdatedAsync(string pin, int? matchId = null);
     Task NotifyTournamentTeamUpdatedAsync(string  pin);
 }

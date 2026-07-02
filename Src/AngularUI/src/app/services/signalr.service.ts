@@ -17,8 +17,8 @@ export class PublicSignalRService implements OnDestroy {
       .withAutomaticReconnect()
       .build();
 
-    this.connection.on('TournamentMatchUpdated', (pin: string) =>
-      this.tournamentMatchUpdated$.next({ pin }),
+    this.connection.on('TournamentMatchUpdated', (pin: string, matchId: number | null) =>
+      this.tournamentMatchUpdated$.next({ pin, matchId }),
     );
 
     this.connection.on('TournamentTeamUpdated', (pin: string) =>

@@ -97,7 +97,7 @@ public class MatchService : IMatchService
         UpdateMatchResult(match, result.SetResults.ToList());
 
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin);
+        await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin, match.Id);
 
     }
 
@@ -137,7 +137,7 @@ public class MatchService : IMatchService
         var entity = await SingleMatchAsync(id, nameof(Match.Sets), nameof(Match.Tournament));
         entity.Sets.Clear();
         await _uow.SaveChangesAsync();
-        await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin);
+        await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin, entity.Id);
     }
 
     #endregion
