@@ -340,7 +340,7 @@ public class MatchEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Create_Returns405_MethodNotAllowed()
     {
         AsAdmin();
-        var dto = new MatchDto(0, TournamentId, 1, 1, null, null, null, null, null, null, null, null);
+        var dto = new MatchDto(0, TournamentId, 1, 1, null, null, null, null, null, null, null, null, null);
 
         var response = await _client.PostAsJsonAsync(MatchesUrl(), dto);
 

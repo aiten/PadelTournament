@@ -21,8 +21,8 @@ export class PublicService {
     return this.http.get<Match[]>(`${this.baseUrl(pin, code)}/matches`);
   }
 
-  reportResult(pin: string, code: string, matchId: number, won: boolean): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl(pin, code)}/matches/${matchId}/result`, { won });
+  reportResult(pin: string, code: string, matchId: number, won: boolean, result?: string | null): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl(pin, code)}/matches/${matchId}/result`, { won, result });
   }
 
   getTournament(pin: string): Observable<Tournament> {

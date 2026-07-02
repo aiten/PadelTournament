@@ -87,7 +87,7 @@ public static class PublicEndpoints
         routeTeam.MapGet("/matches", async (string pin, string registrationCode, ITeamService teamService) =>
             {
                 var team    = await teamService.SingleByRegistrationAsync(pin, registrationCode);
-                var matches = await teamService.GetMatchesByTeamIdAsync(team.Id);
+                var matches = await teamService.GetMatchesByTeamIdAsync(team.Id, true);
 
                 return Results.Ok(matches.Select(MatchEndpoints.ToDto).ToList());
             })

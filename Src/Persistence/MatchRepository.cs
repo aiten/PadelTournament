@@ -20,7 +20,7 @@ public interface IMatchRepository : IGenericRepository<Match>
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
     // no Tenant
-    Task<IList<Match>> GetByTeamNoTenantAsync(int teamId);
+    Task<IList<Match>> GetByTeamNoTenantAsync(int teamId, bool loadResults);
 
     Task<Match?> GetByIdNoTenantAsync(int matchId, params string[]? includeProperties);
 
@@ -60,11 +60,20 @@ public class MatchRepository : GenericRepository<Match>, IMatchRepository
 
     #region NoTenant
 
-    public async Task<IList<Match>> GetByTeamNoTenantAsync(int teamId)
+    public async Task<IList<Match>> GetByTeamNoTenantAsync(int teamId, bool loadResults)
     {
-        return await DbSet
+        var query = DbSet
             .IgnoreQueryFilters()
-            .AsNoTracking()
+            .AsNoTracking();
+
+        if (loadResults)
+        {
+            query = query
+                .Include(m => m.Sets)
+                .ThenInclude(s => s.Games);
+        }
+
+        return await query
             .Where(m => m.TeamAId == teamId || m.TeamBId == teamId)
             .OrderBy(m => m.Round)
             .ThenBy(m => m.No)

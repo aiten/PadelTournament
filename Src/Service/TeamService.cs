@@ -22,7 +22,7 @@ public interface ITeamService
 
     Task<Team> SingleByRegistrationAsync(string pin, string registrationCode);
 
-    Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId);
+    Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId, bool includeResults);
 }
 
 public class TeamService : ITeamService
@@ -105,9 +105,9 @@ public class TeamService : ITeamService
         return team ?? throw new NotFoundException("No team found for the given pin and registration code");
     }
 
-    public async Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId)
+    public async Task<IList<Match>> GetMatchesByTeamIdAsync(int teamId, bool includeResult)
     {
         //public => no check for tournament ownership, as this is used for match details which are public
-        return await _uow.Matches.GetByTeamNoTenantAsync(teamId);
+        return await _uow.Matches.GetByTeamNoTenantAsync(teamId, includeResult);
     }
 }

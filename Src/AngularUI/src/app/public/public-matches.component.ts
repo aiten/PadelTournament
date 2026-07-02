@@ -6,11 +6,12 @@ import { PublicSignalRService } from '../services/signalr.service';
 import { Team } from '../models/team.model';
 import { Match } from '../models/match.model';
 import { Tournament } from '../models/tournament.model';
+import { MatchScoreInputComponent } from '../shared/match-score-input.component';
 
 @Component({
   selector: 'app-public-matches',
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, MatchScoreInputComponent],
   styles: [`
     .team-header { margin-bottom: 1.5rem; }
     .team-name { font-size: 1.4rem; font-weight: 700; }
@@ -29,6 +30,9 @@ import { Tournament } from '../models/tournament.model';
     .accept-none { color: #cbd5e1; }
     .my-team { font-weight: 600; }
     .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .score-prompt-row td { background: #f8fafc; }
+    .score-prompt { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+    .score-prompt-actions { display: flex; gap: 8px; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
@@ -65,6 +69,7 @@ import { Tournament } from '../models/tournament.model';
                 <th>Result</th>
                 <th>My Report</th>
                 <th>Opp. Report</th>
+                <th>Score</th>
                 <th></th>
               </tr>
             </thead>
@@ -79,19 +84,41 @@ import { Tournament } from '../models/tournament.model';
                   <td [class]="resultClass(m)">{{ resultLabel(m) }}</td>
                   <td [class]="acceptWonClass(myAcceptWon(m))">{{ acceptWonLabel(myAcceptWon(m)) }}</td>
                   <td [class]="acceptWonClass(oppAcceptWon(m))">{{ acceptWonLabel(oppAcceptWon(m)) }}</td>
+                  <td>{{ setsLabel(m) }}</td>
                   <td>
-                    @if (isPlayable(m)) {
+                    @if (isPlayable(m) && scorePrompt()?.id !== m.id) {
                       <div class="action-btns">
                         <button type="button" class="btn btn-sm btn-primary"
                                 [disabled]="submitting()"
-                                (click)="report(m, true)">I Won</button>
+                                (click)="startReport(m, true)">I Won</button>
                         <button type="button" class="btn btn-sm btn-danger"
                                 [disabled]="submitting()"
-                                (click)="report(m, false)">I Lost</button>
+                                (click)="startReport(m, false)">I Lost</button>
                       </div>
                     }
                   </td>
                 </tr>
+                @if (scorePrompt()?.id === m.id) {
+                  <tr class="score-prompt-row">
+                    <td colspan="10">
+                      <div class="score-prompt">
+                        <strong>{{ scoreWon() ? 'You won' : 'You lost' }} — enter the set scores</strong>
+                        <app-match-score-input
+                          [teamALabel]="teamLabel(m.teamAId)"
+                          [teamBLabel]="teamLabel(m.teamBId)"
+                          [(value)]="scoreValue" />
+                        <div class="score-prompt-actions">
+                          <button type="button" class="btn btn-sm btn-primary"
+                                  [disabled]="submitting() || !scoreValue()"
+                                  (click)="confirmReport(m)">Confirm</button>
+                          <button type="button" class="btn btn-sm"
+                                  [disabled]="submitting()"
+                                  (click)="cancelReport()">Cancel</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                }
               }
             </tbody>
           </table>
@@ -112,6 +139,10 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
   submitting  = signal(false);
   error       = signal('');
   reportError = signal('');
+
+  scorePrompt = signal<Match | null>(null);
+  scoreWon    = signal(false);
+  scoreValue  = signal<string | null>(null);
 
   pin       = '';
   code      = '';
@@ -218,6 +249,14 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
     return m.result;
   }
 
+  setsLabel(m: Match): string {
+    if (!m.sets || m.sets.length === 0) return '';
+    return [...m.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`)
+      .join(' ');
+  }
+
   resultClass(m: Match): string {
     if (!m.result) return 'result-none';
     const myId = this.team()?.id;
@@ -226,12 +265,29 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
     return won ? 'result-won' : 'result-lost';
   }
 
-  report(m: Match, won: boolean): void {
+  startReport(m: Match, won: boolean): void {
+    this.reportError.set('');
+    this.scoreValue.set(null);
+    this.scoreWon.set(won);
+    this.scorePrompt.set(m);
+  }
+
+  cancelReport(): void {
+    this.scorePrompt.set(null);
+    this.scoreValue.set(null);
+  }
+
+  confirmReport(m: Match): void {
+    const result = this.scoreValue();
+    if (!result) return;
+
     this.submitting.set(true);
     this.reportError.set('');
-    this.publicService.reportResult(this.pin, this.code, m.id, won).subscribe({
+    this.publicService.reportResult(this.pin, this.code, m.id, this.scoreWon(), result).subscribe({
       next: () => {
         this.submitting.set(false);
+        this.scorePrompt.set(null);
+        this.scoreValue.set(null);
         this.reloadMatches();
       },
       error: err => {

@@ -70,7 +70,7 @@ import { TeamService } from '../services/team.service';
   `
 })
 export class MatchFormComponent implements OnInit {
-  match = signal<Match>({ id: 0, tournamentId: 0, round: 0, no: 0, teamAId: null, teamBId: null, start: null, nextMatchId: null, acceptA: null, acceptB: null, result: null, remark: null });
+  match = signal<Match>({ id: 0, tournamentId: 0, round: 0, no: 0, teamAId: null, teamBId: null, start: null, nextMatchId: null, acceptA: null, acceptB: null, result: null, remark: null, sets: null });
   teams = signal<Team[]>([]);
   tournamentId = 0;
   error = signal('');

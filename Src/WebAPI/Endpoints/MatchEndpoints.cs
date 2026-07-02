@@ -12,25 +12,26 @@ using Microsoft.AspNetCore.Routing;
 
 using Persistence;
 using Persistence.Model;
+using Persistence.QueryResult;
 
 using Service;
 
 using WebAPI.Filters;
 
 public record MatchDto(
-    int       Id,
-    int       TournamentId,
-    int       Round,
-    int       No,
-    int?      TeamAId,
-    int?      TeamBId,
-    DateTime? Start,
-    int?      NextMatchId,
-    string?   Result,
-    string?   AcceptA,
-    string?   AcceptB,
-    string?   Remark
-);
+    int                       Id,
+    int                       TournamentId,
+    int                       Round,
+    int                       No,
+    int?                      TeamAId,
+    int?                      TeamBId,
+    DateTime?                 Start,
+    int?                      NextMatchId,
+    string?                   Result,
+    string?                   AcceptA,
+    string?                   AcceptB,
+    string?                   Remark,
+    IList<SetResultOverview>? Sets);
 
 public record MatchModifyDto(
     int?      TeamAId,
@@ -46,6 +47,17 @@ public record SetWinnerDto(string Winner);
 public static class MatchEndpoints
 {
     #region Dto-Entity Mapping
+
+    public static SetResultOverview ToDto(Set entity)
+    {
+        return new SetResultOverview(
+            entity.Id,
+            entity.ScoreA,
+            entity.ScoreB,
+            entity.TieBreakPoints,
+            new List<GameResultOverview>()
+        );
+    }
 
     public static MatchDto? ToDto(Match? entity)
     {
@@ -63,7 +75,9 @@ public static class MatchEndpoints
             entity.Result?.ToString(),
             entity.AcceptA?.ToString(),
             entity.AcceptB?.ToString(),
-            entity.Remark);
+            entity.Remark,
+            entity.Sets?.Select(ToDto).ToList()
+        );
     }
 
     #endregion
