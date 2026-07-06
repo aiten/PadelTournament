@@ -7,7 +7,8 @@ import { Team } from '../models/team.model';
 import { PublicService } from '../services/public.service';
 import { PublicSignalRService } from '../services/signalr.service';
 
-const CARD_W = 220;
+const SCORE_W = 54;
+const CARD_W = 220 + SCORE_W;
 const CARD_H = 76;
 const UNIT_H = 100;
 const CONN_W = 60;
@@ -36,12 +37,34 @@ function cardTop(ri: number, ni: number): number {
     .match-card {
       position: absolute;
       width: ${CARD_W}px;
+      display: flex;
+      align-items: stretch;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
       background: #fff;
-      padding: 8px 10px;
       box-sizing: border-box;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    .match-card-main {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 8px 10px;
+    }
+    .match-card-score {
+      flex: 0 0 ${SCORE_W}px;
+      width: ${SCORE_W}px;
+      border-left: 1px solid #e2e8f0;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+    }
+    .score-row {
+      font-size: .72rem;
+      color: #475569;
+      white-space: nowrap;
     }
     .match-label { font-size: .72rem; color: #94a3b8; margin-bottom: 4px; }
     .team-row {
@@ -82,19 +105,28 @@ function cardTop(ri: number, ni: number): number {
               </svg>
               @for (e of positions(); track e.match.id) {
                 <div class="match-card" [style.top.px]="e.top" [style.left.px]="e.left">
-                  <div class="match-label">{{ matchLabel(e.match) }}</div>
-                  <div class="team-row"
-                       [class.winner]="e.match.result === 'WonA'"
-                       [class.loser]="e.match.result === 'WonB'"
-                       [class.tbd]="!e.match.teamAId">
-                    {{ teamName(e.match.teamAId) }}
+                  <div class="match-card-main">
+                    <div class="match-label">{{ matchLabel(e.match) }}</div>
+                    <div class="team-row"
+                         [class.winner]="e.match.result === 'WonA'"
+                         [class.loser]="e.match.result === 'WonB'"
+                         [class.tbd]="!e.match.teamAId">
+                      {{ teamName(e.match.teamAId) }}
+                    </div>
+                    <div class="team-row"
+                         [class.winner]="e.match.result === 'WonB'"
+                         [class.loser]="e.match.result === 'WonA'"
+                         [class.tbd]="!e.match.teamBId">
+                      {{ teamName(e.match.teamBId) }}
+                    </div>
                   </div>
-                  <div class="team-row"
-                       [class.winner]="e.match.result === 'WonB'"
-                       [class.loser]="e.match.result === 'WonA'"
-                       [class.tbd]="!e.match.teamBId">
-                    {{ teamName(e.match.teamBId) }}
-                  </div>
+                  @if (setRows(e.match).length > 0) {
+                    <div class="match-card-score">
+                      @for (row of setRows(e.match); track $index) {
+                        <div class="score-row">{{ row }}</div>
+                      }
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -273,5 +305,12 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   teamName(id: number | null): string {
     if (id === null) return 'TBD';
     return this.teamNames().get(id) ?? `#${id}`;
+  }
+
+  setRows(match: Match): string[] {
+    if (!match.sets || match.sets.length === 0) return [];
+    return [...match.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`);
   }
 }

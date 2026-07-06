@@ -68,7 +68,7 @@ public class TournamentRepository : GenericRepository<Tournament>, ITournamentRe
 
         if (loadMatches)
         {
-            query = query.Include(t => t.Matches);
+            query = query.Include(t => t.Matches).ThenInclude(m => m.Sets);
         }
 
         return await query.FirstOrDefaultAsync();
