@@ -312,7 +312,20 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
 
   private reloadMatches(): void {
     this.publicService.getMyMatches(this.pin, this.code).subscribe({
-      next: matches => this.matches.set(matches)
+      next: matches => {
+        this.matches.set(matches);
+
+        const prompt = this.scorePrompt();
+        if (prompt) {
+          const updated = matches.find(m => m.id === prompt.id);
+          if (updated && this.isPlayable(updated)) {
+            this.scorePrompt.set(updated);
+            this.scoreValue.set(this.initialScoreValue(updated));
+          } else {
+            this.cancelReport();
+          }
+        }
+      }
     });
   }
 }

@@ -100,7 +100,7 @@ public class MatchService : IMatchService
         await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin, match.Id);
     }
 
-    private void UpdateMatchResult(Match match, IList<SetResultOverview> sets)
+    private bool UpdateMatchResult(Match match, IList<SetResultOverview> sets)
     {
         var toDb = sets.Select(set => new Set()
         {
@@ -128,6 +128,8 @@ public class MatchService : IMatchService
                 gDb.Server = gDto.Server;
             });
         });
+
+        return true;
     }
 
     public async Task DeleteMatchResultAsync(int id)
@@ -164,7 +166,7 @@ public class MatchService : IMatchService
 
         if (sets is not null)
         {
-            UpdateMatchResult(match, sets);
+            changed = UpdateMatchResult(match, sets) || changed;
         }
 
         await _uow.SaveChangesAsync();

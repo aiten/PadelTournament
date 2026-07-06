@@ -1,4 +1,4 @@
-import { Component, OnInit, input, model, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, effect, input, model, signal, ChangeDetectionStrategy } from '@angular/core';
 
 interface SetScore {
   scoreA: number;
@@ -123,7 +123,7 @@ function formatValue(sets: SetScore[]): string | null {
     </div>
   `
 })
-export class MatchScoreInputComponent implements OnInit {
+export class MatchScoreInputComponent {
   teamALabel   = input('Team A');
   teamBLabel   = input('Team B');
   maxSets      = input(5);
@@ -135,8 +135,17 @@ export class MatchScoreInputComponent implements OnInit {
 
   sets = signal<SetScore[]>([emptySet()]);
 
-  ngOnInit(): void {
-    this.sets.set(parseValue(this.value()));
+  /** Distinguishes external writes to `value` (e.g. a reload) from our own commits, so we only re-parse on the former. */
+  private lastEmitted: string | null | undefined = undefined;
+
+  constructor() {
+    effect(() => {
+      const v = this.value();
+      if (v !== this.lastEmitted) {
+        this.lastEmitted = v;
+        this.sets.set(parseValue(v));
+      }
+    });
   }
 
   hasTieBreak(s: SetScore): boolean {
@@ -199,6 +208,8 @@ export class MatchScoreInputComponent implements OnInit {
 
   private commit(next: SetScore[]): void {
     this.sets.set(next);
-    this.value.set(formatValue(next));
+    const formatted = formatValue(next);
+    this.lastEmitted = formatted;
+    this.value.set(formatted);
   }
 }
