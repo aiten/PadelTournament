@@ -108,7 +108,7 @@ public static class MatchEndpoints
 
         routeUser.MapGet("/{id:int}", async (int tournamentId, int id, IMatchService matchService) =>
             {
-                var entity = await matchService.SingleMatchAsync(id);
+                var entity = await matchService.SingleMatchAsync(id, nameof(Match.Sets));
                 EndpointTools.CheckTournamentId(tournamentId, entity.TournamentId);
 
                 return Results.Ok(ToDto(entity));
@@ -158,7 +158,17 @@ public static class MatchEndpoints
                 }
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
-                await matchService.SetWinnerAsync(id, winner.Value, PublicEndpoints.ParseSets(dto.Result));
+                var sets = PublicEndpoints.ParseSets(dto.Result);
+
+                if (match.Result is null)
+                {
+                    await matchService.SetWinnerAsync(id, winner.Value, sets);
+                }
+                else
+                {
+                    await matchService.ChangeResultAsync(id, winner.Value, sets);
+                }
+
                 await trans.CommitTransactionAsync();
 
                 return Results.NoContent();

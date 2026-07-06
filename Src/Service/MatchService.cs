@@ -30,6 +30,8 @@ public interface IMatchService
 
     Task SetWinnerAsync(int matchId, MatchResult winner, IList<SetResultOverview>? sets = null);
 
+    Task ChangeResultAsync(int matchId, MatchResult winner, IList<SetResultOverview>? sets);
+
     Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result, IList<SetResultOverview>? sets);
 }
 
@@ -229,6 +231,63 @@ public class MatchService : IMatchService
         }
 
         return changed;
+    }
+
+    public async Task ChangeResultAsync(int matchId, MatchResult winner, IList<SetResultOverview>? sets)
+    {
+        var match = await _uow.Matches.GetByIdNoTenantAsync(matchId,
+            nameof(Match.NextMatch),
+            nameof(Match.Tournament),
+            nameof(Match.Sets),
+            $"{nameof(Match.Sets)}.{nameof(Set.Games)}"
+        );
+        if (match is null)
+        {
+            throw new NotFoundException($"Match not found! {matchId}");
+        }
+
+        if (match.Result is null)
+        {
+            throw new IllegalValuesException($"The match has not been played yet! {matchId}");
+        }
+
+        bool changed = false;
+
+        if (match.Result != winner)
+        {
+            if (match.NextMatch is not null && match.NextMatch.Result is not null)
+            {
+                throw new IllegalValuesException($"Cannot change the winner, the next match already has a result (match={match.NextMatch.Id})");
+            }
+
+            match.Result = winner;
+            changed      = true;
+
+            var winnerId = winner == MatchResult.WonA ? match.TeamAId : match.TeamBId;
+
+            if (match.NextMatch is not null)
+            {
+                if ((match.No % 2) == 1)
+                {
+                    match.NextMatch.TeamAId = winnerId;
+                }
+                else
+                {
+                    match.NextMatch.TeamBId = winnerId;
+                }
+            }
+        }
+
+        if (sets is not null)
+        {
+            changed = UpdateMatchResult(match, sets) || changed;
+        }
+
+        await _uow.SaveChangesAsync();
+        if (changed)
+        {
+            await _hub.NotifyTournamentMatchUpdatedAsync(match.Tournament.RegistrationPin, matchId);
+        }
     }
 
     private async Task<Match> GetActiveMatchAsync(int matchId)

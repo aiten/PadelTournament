@@ -8,18 +8,22 @@ import { TeamService } from '../services/team.service';
 import { PublicSignalRService } from '../services/signalr.service';
 import { TournamentService } from '../services/tournament.service';
 import { Tournament } from '../models/tournament.model';
+import { MatchScoreInputComponent } from '../shared/match-score-input.component';
 
 type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
 
 @Component({
   selector: 'app-match-list',
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, MatchScoreInputComponent],
   styles: [`
     th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
     th.sortable:hover { background: #e2e8f0; }
     .sort-icon { margin-left: 4px; font-size: .8em; opacity: .5; }
     th.sort-active .sort-icon { opacity: 1; }
+    .score-prompt-row td { background: #f8fafc; }
+    .score-prompt { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+    .score-prompt-actions { display: flex; gap: 8px; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
@@ -57,6 +61,7 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
               <th class="sortable" [class.sort-active]="sortCol() === 'result'" (click)="sort('result')">
                 Result <span class="sort-icon">{{ sortIcon('result') }}</span>
               </th>
+              <th>Score</th>
               <th>Remark</th>
               <th></th>
             </tr>
@@ -70,15 +75,36 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
                 <td>{{ teamName(m.teamBId) }}</td>
                 <td>{{ formatDateTime(m.start) }}</td>
                 <td>{{ resultLabel(m.result) }}</td>
+                <td>{{ setsLabel(m) }}</td>
                 <td>{{ m.remark ?? '' }}</td>
                 <td>
                   <a [routerLink]="['/tournaments', tournamentId, 'matches', m.id]" class="btn btn-sm">Edit</a>
-                  @if (m.teamAId && m.teamBId && !m.result) {
-                    <button type="button" class="btn btn-sm btn-winner" (click)="setWinner(m, 'WonA')">{{ teamName(m.teamAId) }} wins</button>
-                    <button type="button" class="btn btn-sm btn-winner" (click)="setWinner(m, 'WonB')">{{ teamName(m.teamBId) }} wins</button>
+                  @if (m.teamAId && m.teamBId && !m.result && scorePrompt()?.id !== m.id) {
+                    <button type="button" class="btn btn-sm btn-winner" (click)="startReport(m, 'WonA')">{{ teamName(m.teamAId) }} wins</button>
+                    <button type="button" class="btn btn-sm btn-winner" (click)="startReport(m, 'WonB')">{{ teamName(m.teamBId) }} wins</button>
                   }
                 </td>
               </tr>
+              @if (scorePrompt()?.id === m.id) {
+                <tr class="score-prompt-row">
+                  <td colspan="9">
+                    <div class="score-prompt">
+                      <strong>{{ teamName(pendingWinner() === 'WonA' ? m.teamAId : m.teamBId) }} wins — enter the set scores (optional)</strong>
+                      <app-match-score-input
+                        [teamALabel]="teamName(m.teamAId)"
+                        [teamBLabel]="teamName(m.teamBId)"
+                        [(value)]="scoreValue" />
+                      @if (reportError()) {
+                        <p class="error">{{ reportError() }}</p>
+                      }
+                      <div class="score-prompt-actions">
+                        <button type="button" class="btn btn-sm btn-primary" [disabled]="submitting()" (click)="confirmReport(m)">Confirm</button>
+                        <button type="button" class="btn btn-sm" [disabled]="submitting()" (click)="cancelReport()">Cancel</button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
@@ -97,6 +123,13 @@ export class MatchListComponent implements OnInit, OnDestroy {
   loading = signal(false);
   sortCol = signal<SortCol>('round');
   sortAsc = signal(true);
+
+  scorePrompt   = signal<Match | null>(null);
+  pendingWinner = signal<'WonA' | 'WonB' | null>(null);
+  scoreValue    = signal<string | null>(null);
+  submitting    = signal(false);
+  reportError   = signal('');
+
   private signalRSub?: Subscription;
 
   sortedMatches = computed(() => {
@@ -189,11 +222,46 @@ export class MatchListComponent implements OnInit, OnDestroy {
     return this.teams().find(t => t.id === id)?.name ?? `#${id}`;
   }
 
-  setWinner(m: Match, winner: 'WonA' | 'WonB'): void {
-    this.matchService.setWinner(this.tournamentId, m.id, winner).subscribe({
-      next: () => this.loadMatches(),
-      error: err => alert(err.error?.detail ?? 'Set winner failed.')
+  startReport(m: Match, winner: 'WonA' | 'WonB'): void {
+    this.reportError.set('');
+    this.scoreValue.set(null);
+    this.pendingWinner.set(winner);
+    this.scorePrompt.set(m);
+  }
+
+  cancelReport(): void {
+    this.scorePrompt.set(null);
+    this.pendingWinner.set(null);
+    this.scoreValue.set(null);
+  }
+
+  confirmReport(m: Match): void {
+    const winner = this.pendingWinner();
+    if (!winner) return;
+
+    this.submitting.set(true);
+    this.reportError.set('');
+    this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue()).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.scorePrompt.set(null);
+        this.pendingWinner.set(null);
+        this.scoreValue.set(null);
+        this.loadMatches();
+      },
+      error: err => {
+        this.submitting.set(false);
+        this.reportError.set(err.error?.detail ?? 'Set winner failed.');
+      }
     });
+  }
+
+  setsLabel(m: Match): string {
+    if (!m.sets || m.sets.length === 0) return '';
+    return [...m.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`)
+      .join(' ');
   }
 
   resultLabel(result: string | null): string {

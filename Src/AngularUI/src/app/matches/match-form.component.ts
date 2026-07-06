@@ -5,11 +5,17 @@ import { Match, MatchModify } from '../models/match.model';
 import { Team } from '../models/team.model';
 import { MatchService } from '../services/match.service';
 import { TeamService } from '../services/team.service';
+import { MatchScoreInputComponent } from '../shared/match-score-input.component';
 
 @Component({
   selector: 'app-match-form',
   standalone: true,
-  imports: [FormsModule, RouterModule],
+  imports: [FormsModule, RouterModule, MatchScoreInputComponent],
+  styles: [`
+    .score-prompt { display: flex; flex-direction: column; gap: 10px; }
+    .score-prompt-actions { display: flex; gap: 8px; }
+    .winner-toggle { display: flex; gap: 8px; }
+  `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
@@ -40,11 +46,34 @@ import { TeamService } from '../services/team.service';
         <div class="form-group">
           <label>Result</label>
           <div class="radio-group">
-            @if (match().teamAId && match().teamBId && !match().result) {
-              <button type="button" class="btn btn-winner" (click)="setWinner('WonA')">
+            @if (pendingWinner(); as winner) {
+              <div class="score-prompt">
+                @if (match().result) {
+                  <div class="winner-toggle">
+                    <button type="button" class="btn btn-sm" [class.btn-winner]="winner === 'WonA'"
+                            (click)="pendingWinner.set('WonA')">{{ teamName(match().teamAId) }} wins</button>
+                    <button type="button" class="btn btn-sm" [class.btn-winner]="winner === 'WonB'"
+                            (click)="pendingWinner.set('WonB')">{{ teamName(match().teamBId) }} wins</button>
+                  </div>
+                }
+                <strong>{{ teamName(winner === 'WonA' ? match().teamAId : match().teamBId) }} wins — enter the set scores (optional)</strong>
+                <app-match-score-input
+                  [teamALabel]="teamName(match().teamAId)"
+                  [teamBLabel]="teamName(match().teamBId)"
+                  [(value)]="scoreValue" />
+                <div class="score-prompt-actions">
+                  <button type="button" class="btn btn-primary" [disabled]="submitting()" (click)="confirmReport()">Confirm</button>
+                  <button type="button" class="btn" [disabled]="submitting()" (click)="cancelReport()">Cancel</button>
+                </div>
+              </div>
+            } @else if (match().result) {
+              <span>{{ resultLabel() }}@if (setsLabel()) { — {{ setsLabel() }} }</span>
+              <button type="button" class="btn btn-sm" (click)="startChangeResult()">Change Result</button>
+            } @else if (match().teamAId && match().teamBId) {
+              <button type="button" class="btn btn-winner" (click)="startReport('WonA')">
                 {{ teamName(match().teamAId) }} wins
               </button>
-              <button type="button" class="btn btn-winner" (click)="setWinner('WonB')">
+              <button type="button" class="btn btn-winner" (click)="startReport('WonB')">
                 {{ teamName(match().teamBId) }} wins
               </button>
             } @else {
@@ -76,6 +105,10 @@ export class MatchFormComponent implements OnInit {
   error = signal('');
   formResult = 'NoResult';
 
+  pendingWinner = signal<'WonA' | 'WonB' | null>(null);
+  scoreValue    = signal<string | null>(null);
+  submitting    = signal(false);
+
   constructor(
     private matchService: MatchService,
     private teamService: TeamService,
@@ -101,11 +134,61 @@ export class MatchFormComponent implements OnInit {
     return this.teams().find(t => t.id === teamId)?.name ?? 'Team';
   }
 
-  setWinner(winner: 'WonA' | 'WonB'): void {
+  resultLabel(): string {
     const m = this.match();
-    this.matchService.setWinner(this.tournamentId, m.id, winner).subscribe({
+    if (m.result === 'WonA') return `${this.teamName(m.teamAId)} won`;
+    if (m.result === 'WonB') return `${this.teamName(m.teamBId)} won`;
+    return '';
+  }
+
+  setsLabel(): string {
+    const m = this.match();
+    if (!m.sets || m.sets.length === 0) return '';
+    return [...m.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`)
+      .join(' ');
+  }
+
+  /** Formats the match's already-recorded sets as "6:4, 6:2, 7:6(2)" to prefill the score input. */
+  private initialScoreValue(m: Match): string | null {
+    if (!m.sets || m.sets.length === 0) return null;
+    return [...m.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`)
+      .join(', ');
+  }
+
+  startReport(winner: 'WonA' | 'WonB'): void {
+    this.error.set('');
+    this.scoreValue.set(null);
+    this.pendingWinner.set(winner);
+  }
+
+  startChangeResult(): void {
+    const m = this.match();
+    this.error.set('');
+    this.scoreValue.set(this.initialScoreValue(m));
+    this.pendingWinner.set(m.result as 'WonA' | 'WonB');
+  }
+
+  cancelReport(): void {
+    this.pendingWinner.set(null);
+    this.scoreValue.set(null);
+  }
+
+  confirmReport(): void {
+    const winner = this.pendingWinner();
+    if (!winner) return;
+
+    const m = this.match();
+    this.submitting.set(true);
+    this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue()).subscribe({
       next: () => this.router.navigate(['/tournaments', this.tournamentId, 'matches']),
-      error: err => this.error.set(err.error?.detail ?? 'Set winner failed.')
+      error: err => {
+        this.submitting.set(false);
+        this.error.set(err.error?.detail ?? 'Set winner failed.');
+      }
     });
   }
 

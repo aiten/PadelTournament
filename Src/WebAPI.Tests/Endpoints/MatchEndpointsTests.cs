@@ -112,7 +112,7 @@ public class MatchEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetById_ReturnsOk_WhenExists()
     {
         AsUser();
-        _factory.MatchService.SingleMatchAsync(1).Returns(MakeMatch(1));
+        _factory.MatchService.SingleMatchAsync(1, nameof(Match.Sets)).Returns(MakeMatch(1));
 
         var response = await _client.GetAsync(MatchUrl(1));
 
@@ -127,7 +127,7 @@ public class MatchEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetById_Returns404_WhenMatchNotFound()
     {
         AsUser();
-        _factory.MatchService.SingleMatchAsync(999)
+        _factory.MatchService.SingleMatchAsync(999, nameof(Match.Sets))
             .Returns(Task.FromException<Match>(new NotFoundException("Match 999 not found")));
 
         var response = await _client.GetAsync(MatchUrl(999));
@@ -139,7 +139,7 @@ public class MatchEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetById_Returns400_WhenMatchBelongsToDifferentTournament()
     {
         AsUser();
-        _factory.MatchService.SingleMatchAsync(5).Returns(MakeMatch(5, tournamentId: 99));
+        _factory.MatchService.SingleMatchAsync(5, nameof(Match.Sets)).Returns(MakeMatch(5, tournamentId: 99));
 
         var response = await _client.GetAsync(MatchUrl(5, tournamentId: TournamentId));
 
