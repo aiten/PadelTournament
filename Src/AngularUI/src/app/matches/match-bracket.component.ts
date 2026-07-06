@@ -8,8 +8,10 @@ import { MatchService } from '../services/match.service';
 import { TeamService } from '../services/team.service';
 import { PublicSignalRService } from '../services/signalr.service';
 import { TournamentService } from '../services/tournament.service';
+import { MatchScoreInputComponent } from '../shared/match-score-input.component';
 
-const CARD_W = 220;
+const SCORE_W = 54;
+const CARD_W = 220 + SCORE_W;
 const CARD_H = 76;
 const UNIT_H = 100;
 const CONN_W = 60;
@@ -34,7 +36,7 @@ function cardTop(ri: number, ni: number): number {
 @Component({
   selector: 'app-match-bracket',
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, MatchScoreInputComponent],
   styles: [`
     .page         { padding: 0 24px; }
     .bracket-scroll {
@@ -46,12 +48,34 @@ function cardTop(ri: number, ni: number): number {
     .match-card {
       position: absolute;
       width: ${CARD_W}px;
+      display: flex;
+      align-items: stretch;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
       background: #fff;
-      padding: 8px 10px;
       box-sizing: border-box;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    .match-card-main {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 8px 10px;
+    }
+    .match-card-score {
+      flex: 0 0 ${SCORE_W}px;
+      width: ${SCORE_W}px;
+      border-left: 1px solid #e2e8f0;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+    }
+    .score-row {
+      font-size: .72rem;
+      color: #475569;
+      white-space: nowrap;
     }
     .match-label { font-size: .72rem; color: #94a3b8; margin-bottom: 4px; }
     .team-row {
@@ -66,6 +90,19 @@ function cardTop(ri: number, ni: number): number {
     .team-row.tbd    { color: #cbd5e1; font-style: italic; }
     .winner-btns { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
     .winner-btns.compact .btn { padding: 1px 6px; font-size: .7rem; }
+    .score-prompt-panel {
+      max-width: 420px;
+      margin: 24px auto 0;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .score-prompt-title { font-size: 1rem; font-weight: 600; color: #334155; }
+    .score-prompt-actions { display: flex; gap: 8px; justify-content: flex-end; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
@@ -76,6 +113,23 @@ function cardTop(ri: number, ni: number): number {
       </div>
       @if (loading()) {
         <p class="empty">Loading…</p>
+      } @else if (scorePrompt(); as promptMatch) {
+        <div class="score-prompt-panel">
+          <div class="score-prompt-title">
+            {{ teamName(pendingWinner() === 'WonA' ? promptMatch.teamAId : promptMatch.teamBId) }} wins — enter the set scores (optional)
+          </div>
+          <app-match-score-input
+            [teamALabel]="teamName(promptMatch.teamAId)"
+            [teamBLabel]="teamName(promptMatch.teamBId)"
+            [(value)]="scoreValue" />
+          @if (reportError()) {
+            <p class="error">{{ reportError() }}</p>
+          }
+          <div class="score-prompt-actions">
+            <button type="button" class="btn" [disabled]="submitting()" (click)="cancelReport()">Cancel</button>
+            <button type="button" class="btn btn-primary" [disabled]="submitting()" (click)="confirmReport(promptMatch)">Confirm</button>
+          </div>
+        </div>
       } @else if (positions().length === 0) {
         <p class="empty">No matches found.</p>
       } @else {
@@ -93,29 +147,38 @@ function cardTop(ri: number, ni: number): number {
 
               @for (e of positions(); track e.match.id) {
                 <div class="match-card" [style.top.px]="e.top" [style.left.px]="e.left">
-                  @if (!(e.match.round === 1 && e.match.teamAId && e.match.teamBId && !e.match.result)) {
-                    <div class="match-label">{{ matchLabel(e.match) }}</div>
-                  }
-                  <div class="team-row"
-                       [class.winner]="e.match.result === 'WonA'"
-                       [class.loser]="e.match.result === 'WonB'"
-                       [class.tbd]="!e.match.teamAId">
-                    {{ teamName(e.match.teamAId) }}
+                  <div class="match-card-main">
+                    @if (!(e.match.round === 1 && e.match.teamAId && e.match.teamBId && !e.match.result)) {
+                      <div class="match-label">{{ matchLabel(e.match) }}</div>
+                    }
+                    <div class="team-row"
+                         [class.winner]="e.match.result === 'WonA'"
+                         [class.loser]="e.match.result === 'WonB'"
+                         [class.tbd]="!e.match.teamAId">
+                      {{ teamName(e.match.teamAId) }}
+                    </div>
+                    <div class="team-row"
+                         [class.winner]="e.match.result === 'WonB'"
+                         [class.loser]="e.match.result === 'WonA'"
+                         [class.tbd]="!e.match.teamBId">
+                      {{ teamName(e.match.teamBId) }}
+                    </div>
+                    @if (e.match.teamAId && e.match.teamBId && !e.match.result) {
+                      <div class="winner-btns" [class.compact]="e.match.round === 1">
+                        <button type="button" class="btn btn-sm btn-winner" (click)="startReport(e.match, 'WonA')">
+                          {{ teamName(e.match.teamAId) }} wins
+                        </button>
+                        <button type="button" class="btn btn-sm btn-winner" (click)="startReport(e.match, 'WonB')">
+                          {{ teamName(e.match.teamBId) }} wins
+                        </button>
+                      </div>
+                    }
                   </div>
-                  <div class="team-row"
-                       [class.winner]="e.match.result === 'WonB'"
-                       [class.loser]="e.match.result === 'WonA'"
-                       [class.tbd]="!e.match.teamBId">
-                    {{ teamName(e.match.teamBId) }}
-                  </div>
-                  @if (e.match.teamAId && e.match.teamBId && !e.match.result) {
-                    <div class="winner-btns" [class.compact]="e.match.round === 1">
-                      <button type="button" class="btn btn-sm btn-winner" (click)="setWinner(e.match, 'WonA')">
-                        {{ teamName(e.match.teamAId) }} wins
-                      </button>
-                      <button type="button" class="btn btn-sm btn-winner" (click)="setWinner(e.match, 'WonB')">
-                        {{ teamName(e.match.teamBId) }} wins
-                      </button>
+                  @if (setRows(e.match).length > 0) {
+                    <div class="match-card-score">
+                      @for (row of setRows(e.match); track $index) {
+                        <div class="score-row">{{ row }}</div>
+                      }
                     </div>
                   }
                 </div>
@@ -133,6 +196,12 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
   matches = signal<Match[]>([]);
   teams   = signal<Team[]>([]);
   loading = signal(true);
+
+  scorePrompt   = signal<Match | null>(null);
+  pendingWinner = signal<'WonA' | 'WonB' | null>(null);
+  scoreValue    = signal<string | null>(null);
+  submitting    = signal(false);
+  reportError   = signal('');
 
   containerWidth = signal(window.innerWidth);
 
@@ -285,10 +354,44 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     return this.teams().find(t => t.id === id)?.name ?? `#${id}`;
   }
 
-  setWinner(m: Match, winner: 'WonA' | 'WonB'): void {
-    this.matchService.setWinner(this.tournamentId, m.id, winner).subscribe({
-      next:  () => this.loadMatches(),
-      error: err => alert(err.error?.detail ?? 'Set winner failed.')
+  setRows(match: Match): string[] {
+    if (!match.sets || match.sets.length === 0) return [];
+    return [...match.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`);
+  }
+
+  startReport(m: Match, winner: 'WonA' | 'WonB'): void {
+    this.reportError.set('');
+    this.scoreValue.set(null);
+    this.pendingWinner.set(winner);
+    this.scorePrompt.set(m);
+  }
+
+  cancelReport(): void {
+    this.scorePrompt.set(null);
+    this.pendingWinner.set(null);
+    this.scoreValue.set(null);
+  }
+
+  confirmReport(m: Match): void {
+    const winner = this.pendingWinner();
+    if (!winner) return;
+
+    this.submitting.set(true);
+    this.reportError.set('');
+    this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue()).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.scorePrompt.set(null);
+        this.pendingWinner.set(null);
+        this.scoreValue.set(null);
+        this.loadMatches();
+      },
+      error: err => {
+        this.submitting.set(false);
+        this.reportError.set(err.error?.detail ?? 'Set winner failed.');
+      }
     });
   }
 }

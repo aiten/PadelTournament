@@ -28,7 +28,7 @@ public interface IMatchService
 
     Task<MatchResultOverview?> GetMatchResultAsync(int matchId);
 
-    Task SetWinnerAsync(int matchId, MatchResult winner);
+    Task SetWinnerAsync(int matchId, MatchResult winner, IList<SetResultOverview>? sets = null);
 
     Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result, IList<SetResultOverview>? sets);
 }
@@ -176,11 +176,16 @@ public class MatchService : IMatchService
         }
     }
 
-    public async Task SetWinnerAsync(int matchId, MatchResult winner)
+    public async Task SetWinnerAsync(int matchId, MatchResult winner, IList<SetResultOverview>? sets = null)
     {
         var match = await GetActiveMatchAsync(matchId);
 
         bool changed = await SetWinnerAsync(match, winner);
+
+        if (sets is not null)
+        {
+            changed = UpdateMatchResult(match, sets) || changed;
+        }
 
         await _uow.SaveChangesAsync();
         if (changed)

@@ -21,7 +21,7 @@ export class MatchService {
     return this.http.put<void>(`${this.baseUrl}/${tournamentId}/matches/${id}`, dto);
   }
 
-  setWinner(tournamentId: number, id: number, winner: 'WonA' | 'WonB'): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/${tournamentId}/matches/${id}/winner`, { winner });
+  setWinner(tournamentId: number, id: number, winner: 'WonA' | 'WonB', result?: string | null): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/${tournamentId}/matches/${id}/winner`, { winner, result });
   }
 }

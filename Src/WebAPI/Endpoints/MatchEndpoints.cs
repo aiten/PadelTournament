@@ -42,7 +42,7 @@ public record MatchModifyDto(
     string?   Remark
 );
 
-public record SetWinnerDto(string Winner);
+public record SetWinnerDto(string Winner, string? Result = null);
 
 public static class MatchEndpoints
 {
@@ -100,7 +100,7 @@ public static class MatchEndpoints
 
         routeUser.MapGet("", async (int tournamentId, ITournamentService tournamentService) =>
             {
-                var tournament = await tournamentService.SingleTournamentAsync(tournamentId, nameof(Tournament.Matches));
+                var tournament = await tournamentService.SingleTournamentAsync(tournamentId, $"{nameof(Tournament.Matches)}.{nameof(Match.Sets)}");
                 return Results.Ok(tournament.Matches.Select(ToDto).ToList());
             })
             .WithName("GetMatches")
@@ -158,7 +158,7 @@ public static class MatchEndpoints
                 }
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
-                await matchService.SetWinnerAsync(id, winner.Value);
+                await matchService.SetWinnerAsync(id, winner.Value, PublicEndpoints.ParseSets(dto.Result));
                 await trans.CommitTransactionAsync();
 
                 return Results.NoContent();

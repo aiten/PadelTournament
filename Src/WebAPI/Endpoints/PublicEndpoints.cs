@@ -25,7 +25,7 @@ public record PublicMatchResultDto(bool Won, string? Result = null);
 public static class PublicEndpoints
 {
     // Parses a comma-separated set score list, e.g. "6:4, 6:3, 6:5(2)", into set results.
-    private static List<SetResultOverview>? ParseSets(string? result)
+    internal static List<SetResultOverview>? ParseSets(string? result)
     {
         if (string.IsNullOrEmpty(result))
         {
