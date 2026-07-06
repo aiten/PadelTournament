@@ -54,13 +54,19 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
                             (click)="pendingWinner.set('WonA')">{{ teamName(match().teamAId) }} wins</button>
                     <button type="button" class="btn btn-sm" [class.btn-winner]="winner === 'WonB'"
                             (click)="pendingWinner.set('WonB')">{{ teamName(match().teamBId) }} wins</button>
+                    <button type="button" class="btn btn-sm" [class.btn-danger]="winner === 'NoResult'"
+                            (click)="pendingWinner.set('NoResult')">No Result</button>
                   </div>
                 }
-                <strong>{{ teamName(winner === 'WonA' ? match().teamAId : match().teamBId) }} wins — enter the set scores (optional)</strong>
-                <app-match-score-input
-                  [teamALabel]="teamName(match().teamAId)"
-                  [teamBLabel]="teamName(match().teamBId)"
-                  [(value)]="scoreValue" />
+                @if (winner === 'NoResult') {
+                  <strong>Revert this match to "No Result" — the recorded score will be cleared.</strong>
+                } @else {
+                  <strong>{{ teamName(winner === 'WonA' ? match().teamAId : match().teamBId) }} wins — enter the set scores (optional)</strong>
+                  <app-match-score-input
+                    [teamALabel]="teamName(match().teamAId)"
+                    [teamBLabel]="teamName(match().teamBId)"
+                    [(value)]="scoreValue" />
+                }
                 <div class="score-prompt-actions">
                   <button type="button" class="btn btn-primary" [disabled]="submitting()" (click)="confirmReport()">Confirm</button>
                   <button type="button" class="btn" [disabled]="submitting()" (click)="cancelReport()">Cancel</button>
@@ -105,7 +111,7 @@ export class MatchFormComponent implements OnInit {
   error = signal('');
   formResult = 'NoResult';
 
-  pendingWinner = signal<'WonA' | 'WonB' | null>(null);
+  pendingWinner = signal<'WonA' | 'WonB' | 'NoResult' | null>(null);
   scoreValue    = signal<string | null>(null);
   submitting    = signal(false);
 
@@ -161,7 +167,7 @@ export class MatchFormComponent implements OnInit {
 
   startReport(winner: 'WonA' | 'WonB'): void {
     this.error.set('');
-    this.scoreValue.set(null);
+    this.scoreValue.set(this.initialScoreValue(this.match()));
     this.pendingWinner.set(winner);
   }
 
@@ -183,11 +189,16 @@ export class MatchFormComponent implements OnInit {
 
     const m = this.match();
     this.submitting.set(true);
-    this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue()).subscribe({
+
+    const request$ = winner === 'NoResult'
+      ? this.matchService.deleteResult(this.tournamentId, m.id)
+      : this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue());
+
+    request$.subscribe({
       next: () => this.router.navigate(['/tournaments', this.tournamentId, 'matches']),
       error: err => {
         this.submitting.set(false);
-        this.error.set(err.error?.detail ?? 'Set winner failed.');
+        this.error.set(err.error?.detail ?? 'Set result failed.');
       }
     });
   }

@@ -136,8 +136,33 @@ public class MatchService : IMatchService
 
     public async Task DeleteMatchResultAsync(int id)
     {
-        var entity = await SingleMatchAsync(id, nameof(Match.Sets), nameof(Match.Tournament));
+        var entity = await SingleMatchAsync(id, nameof(Match.Sets), nameof(Match.Tournament), nameof(Match.NextMatch));
+
+        if (entity.Result is null)
+        {
+            return;
+        }
+
+        if (entity.NextMatch is not null && entity.NextMatch.Result is not null)
+        {
+            throw new IllegalValuesException($"Cannot revert the result, the next match already has a result (match={entity.NextMatch.Id})");
+        }
+
+        if (entity.NextMatch is not null)
+        {
+            if ((entity.No % 2) == 1)
+            {
+                entity.NextMatch.TeamAId = null;
+            }
+            else
+            {
+                entity.NextMatch.TeamBId = null;
+            }
+        }
+
+        entity.Result = null;
         entity.Sets.Clear();
+
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentMatchUpdatedAsync(entity.Tournament.RegistrationPin, entity.Id);
     }

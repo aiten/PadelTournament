@@ -24,4 +24,8 @@ export class MatchService {
   setWinner(tournamentId: number, id: number, winner: 'WonA' | 'WonB', result?: string | null): Observable<void> {
     return this.http.put<void>(`${this.baseUrl}/${tournamentId}/matches/${id}/winner`, { winner, result });
   }
+
+  deleteResult(tournamentId: number, id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${tournamentId}/matches/${id}/result`);
+  }
 }

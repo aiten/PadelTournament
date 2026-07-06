@@ -222,9 +222,18 @@ export class MatchListComponent implements OnInit, OnDestroy {
     return this.teams().find(t => t.id === id)?.name ?? `#${id}`;
   }
 
+  /** Formats the match's already-recorded sets as "6:4, 6:2, 7:6(2)" to prefill the score input. */
+  private initialScoreValue(m: Match): string | null {
+    if (!m.sets || m.sets.length === 0) return null;
+    return [...m.sets]
+      .sort((a, b) => a.no - b.no)
+      .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreakPoints !== null ? `(${s.tieBreakPoints})` : ''}`)
+      .join(', ');
+  }
+
   startReport(m: Match, winner: 'WonA' | 'WonB'): void {
     this.reportError.set('');
-    this.scoreValue.set(null);
+    this.scoreValue.set(this.initialScoreValue(m));
     this.pendingWinner.set(winner);
     this.scorePrompt.set(m);
   }
