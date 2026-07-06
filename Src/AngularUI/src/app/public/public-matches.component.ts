@@ -109,7 +109,7 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
                           [(value)]="scoreValue" />
                         <div class="score-prompt-actions">
                           <button type="button" class="btn btn-sm btn-primary"
-                                  [disabled]="submitting() || !scoreValue()"
+                                  [disabled]="submitting()"
                                   (click)="confirmReport(m)">Confirm</button>
                           <button type="button" class="btn btn-sm"
                                   [disabled]="submitting()"
@@ -288,7 +288,6 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
 
   confirmReport(m: Match): void {
     const result = this.scoreValue();
-    if (!result) return;
 
     this.submitting.set(true);
     this.reportError.set('');
