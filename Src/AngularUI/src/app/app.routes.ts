@@ -8,6 +8,7 @@ import { TournamentListComponent } from './tournaments/tournament-list.component
 import { TournamentFormComponent } from './tournaments/tournament-form.component';
 import { TeamListComponent } from './teams/team-list.component';
 import { TeamFormComponent } from './teams/team-form.component';
+import { TeamQrComponent } from './teams/team-qr.component';
 import { MatchListComponent } from './matches/match-list.component';
 import { MatchFormComponent } from './matches/match-form.component';
 import { MatchBracketComponent } from './matches/match-bracket.component';
@@ -30,6 +31,7 @@ export const routes: Routes = [
   { path: 'tournaments/:tournamentId/teams/new', component: TeamFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/:tournamentId/teams/bulk', component: TeamBulkAddComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/:tournamentId/teams/:id', component: TeamFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
+  { path: 'tournaments/:tournamentId/teams/:id/qr', component: TeamQrComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/:tournamentId/matches', component: MatchListComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/:tournamentId/matches/:id', component: MatchFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/:tournamentId/bracket', component: MatchBracketComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },

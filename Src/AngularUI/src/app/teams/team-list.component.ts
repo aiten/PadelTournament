@@ -61,6 +61,9 @@ type SortCol = 'name' | 'seed' | 'startMatchPos' | 'registrationDate' | 'registr
                 <td>{{ t.registrationCode ?? '' }}</td>
                 <td>
                   <a [routerLink]="['/tournaments', tournamentId, 'teams', t.id]" class="btn btn-sm">Edit</a>
+                  @if (t.registrationCode) {
+                    <a [routerLink]="['/tournaments', tournamentId, 'teams', t.id, 'qr']" class="btn btn-sm">QR</a>
+                  }
                   <button class="btn btn-sm btn-danger" (click)="deleteTeam(t.id)">Delete</button>
                 </td>
               </tr>
