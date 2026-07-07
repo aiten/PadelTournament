@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Tournament } from '../models/tournament.model';
+import { CountType, Tournament } from '../models/tournament.model';
 import { TournamentService } from '../services/tournament.service';
 
 @Component({
@@ -32,6 +32,35 @@ import { TournamentService } from '../services/tournament.service';
           <label>PIN</label>
           <input type="text" name="registrationPin" [(ngModel)]="tournament().registrationPin" maxlength="5" pattern="[0-9]{5}" class="form-control" />
         </div>
+        <div class="form-group">
+          <label>Count Type</label>
+          <select name="countType" [(ngModel)]="tournament().countType" class="form-control">
+            <option [ngValue]="null">-</option>
+            @for (ct of countTypes; track ct) {
+              <option [ngValue]="ct">{{ ct }}</option>
+            }
+          </select>
+        </div>
+        @if (tournament().countType === CountType.Tennis || tournament().countType === CountType.Padel) {
+          <div class="form-group">
+            <label>Best Of *</label>
+            <input type="number" name="bestOf" [(ngModel)]="tournament().bestOf" required min="1" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Games To Win Set *</label>
+            <input type="number" name="gamesToWinSet" [(ngModel)]="tournament().gamesToWinSet" required min="1" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Min Diff *</label>
+            <input type="number" name="minDiff" [(ngModel)]="tournament().minDiff" required min="1" class="form-control" />
+          </div>
+          <div class="form-group form-check">
+            <label>
+              <input type="checkbox" name="noAdv" [(ngModel)]="tournament().noAdv" />
+              No Advantage
+            </label>
+          </div>
+        }
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" [disabled]="form.invalid || (tournament().from && tournament().to && tournament().from > tournament().to!)">Save</button>
           <a routerLink="/tournaments" class="btn">Cancel</a>
@@ -48,10 +77,24 @@ import { TournamentService } from '../services/tournament.service';
   `
 })
 export class TournamentFormComponent implements OnInit {
-  tournament = signal<Tournament>({ id: 0, description: '', from: '', to: null, registrationPin: null });
+  tournament = signal<Tournament>({
+    id: 0,
+    description: '',
+    from: '',
+    to: null,
+    registrationPin: null,
+    countType: null,
+    bestOf: 3,
+    gamesToWinSet: 6,
+    minDiff: 2,
+    noAdv: false
+  });
 
   isNew = true;
   error = signal('');
+
+  readonly CountType = CountType;
+  readonly countTypes = Object.values(CountType);
 
   constructor(
     private service: TournamentService,

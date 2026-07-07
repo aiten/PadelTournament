@@ -22,12 +22,28 @@ public record TournamentDto(
     string    Description,
     DateOnly  From,
     DateOnly? To,
-    string    RegistrationPin
+    string    RegistrationPin,
+    string?   CountType     = null,
+    int       BestOf        = 3,
+    int       GamesToWinSet = 6,
+    int       MinDiff       = 2,
+    bool      NoAdv         = false
 );
 
 public static class TournamentEndpoints
 {
     #region Dto-Entity Mapping
+
+    private static CountType? EntityCountType(string? countType)
+    {
+        return countType switch
+        {
+            "Tennis" => CountType.Tennis,
+            "Padel"  => CountType.Padel,
+            "Soccer" => CountType.Soccer,
+            _        => null
+        };
+    }
 
     private static Tournament ToEntity(TournamentDto dto)
     {
@@ -37,7 +53,12 @@ public static class TournamentEndpoints
             Description     = dto.Description,
             From            = dto.From,
             To              = dto.To,
-            RegistrationPin = dto.RegistrationPin
+            RegistrationPin = dto.RegistrationPin,
+            CountType       = EntityCountType(dto.CountType),
+            BestOf          = dto.BestOf,
+            GamesToWinSet   = dto.GamesToWinSet,
+            MinDiff         = dto.MinDiff,
+            NoAdv           = dto.NoAdv
         };
     }
 
@@ -53,7 +74,12 @@ public static class TournamentEndpoints
             entity.Description,
             entity.From,
             entity.To,
-            entity.RegistrationPin
+            entity.RegistrationPin,
+            entity.CountType?.ToString(),
+            entity.BestOf,
+            entity.GamesToWinSet,
+            entity.MinDiff,
+            entity.NoAdv
         );
     }
 

@@ -1,24 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Base.Persistence.Contracts;
+using Base.Tools;
+
+using Import;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Persistence;
-
-using System;
-using System.IO;
-using System.Linq;
-
-using Base.Persistence.Contracts;
-using Base.Tools;
-
-using Import;
-
 using Persistence.Model;
 
 using Service;
 
+using Shared;
 using Shared.Exceptions;
+
+using System;
+using System.IO;
+using System.Linq;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -39,6 +39,7 @@ builder.Services
 
 builder.Services.AddScoped<ICurrentUserService, DummyCurrentUserService>();
 builder.Services.AddSingleton<IHubNotificationService, DummyHubNotificationService>();
+builder.Services.AddScoped<ITenantContext, DummyTenantContext>();
 
 var host = builder.Build();
 

@@ -48,9 +48,9 @@ public class TournamentService : ITournamentService
 
     public TournamentService(IUnitOfWork uow, ILogger<TournamentService> logger, IHubNotificationService hub, ITenantContext tenantContext)
     {
-        _uow    = uow;
-        _logger = logger;
-        _hub    = hub;
+        _uow           = uow;
+        _logger        = logger;
+        _hub           = hub;
         _tenantContext = tenantContext;
     }
 
@@ -81,6 +81,11 @@ public class TournamentService : ITournamentService
         entity.From            = tournament.From;
         entity.To              = tournament.To;
         entity.Modified        = DateTime.Now;
+        entity.BestOf          = tournament.BestOf;
+        entity.CountType       = tournament.CountType;
+        entity.GamesToWinSet   = tournament.GamesToWinSet;
+        entity.NoAdv           = tournament.NoAdv;
+        entity.MinDiff         = tournament.MinDiff;
 
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentUpdatedAsync(id);
@@ -353,7 +358,6 @@ public class TournamentService : ITournamentService
         return code;
     }
 
-
     #endregion
 
     #endregion
@@ -368,7 +372,7 @@ public class TournamentService : ITournamentService
 
     public async Task<Team> RegisterTeamByPinAsync(string name, string pin)
     {
-        var tournament = await _uow.Tournaments.GetByPinNoTenantAsync(pin, true,true) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
+        var tournament = await _uow.Tournaments.GetByPinNoTenantAsync(pin, true, true) ?? throw new NotFoundException($"No tournament found with PIN {pin}");
 
         return await RegisterTeamAsync(tournament, name, null, null, true);
     }
@@ -425,6 +429,7 @@ public class TournamentService : ITournamentService
 
         return result;
     }
+
     public async Task<Tournament> SingleTournamentByPinAsync(string pin, bool loadTeams = false, bool loadMatches = false)
     {
         return await _uow.Tournaments.GetByPinNoTenantAsync(pin, loadTeams, loadMatches) ?? throw new NotFoundException($"No Tournament found with Pin {pin}");
