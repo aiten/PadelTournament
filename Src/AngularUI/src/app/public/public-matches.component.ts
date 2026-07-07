@@ -161,11 +161,13 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
     this.load();
 
     this.signalR.joinTournamentGroup(this.pin);
-    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(msg => {
+    this.signalRSub = new Subscription();
+    this.signalRSub.add(this.signalR.tournamentMatchUpdated$.subscribe(msg => {
       if (msg.pin === this.pin && this.isDisplayedMatch(msg.matchId)) {
         this.reloadMatches();
       }
-    });
+    }));
+    this.signalRSub.add(this.signalR.reconnected$.subscribe(() => this.reloadMatches()));
   }
 
   ngOnDestroy(): void {

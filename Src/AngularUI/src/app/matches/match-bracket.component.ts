@@ -246,11 +246,13 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     this.teamService.getAll(this.tournamentId).subscribe(t => this.teams.set(t));
     this.loadMatches();
 
-    this.signalRSub = this.signalR.tournamentMatchUpdated$.subscribe(({ pin }) => {
+    this.signalRSub = new Subscription();
+    this.signalRSub.add(this.signalR.tournamentMatchUpdated$.subscribe(({ pin }) => {
       if (pin === this.tournamentPin) {
         this.loadMatches();
       }
-    });
+    }));
+    this.signalRSub.add(this.signalR.reconnected$.subscribe(() => this.loadMatches()));
   }
 
   ngOnDestroy(): void {

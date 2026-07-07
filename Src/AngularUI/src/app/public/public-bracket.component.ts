@@ -199,6 +199,7 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
         this.reloadData();
       }
     }));
+    this.signalRSub.add(this.signalR.reconnected$.subscribe(() => this.reloadData()));
 
     this.reloadData();
   }
