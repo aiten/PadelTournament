@@ -15,6 +15,7 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
     .score-prompt { display: flex; flex-direction: column; gap: 10px; }
     .score-prompt-actions { display: flex; gap: 8px; }
     .winner-toggle { display: flex; gap: 8px; }
+    .score-prompt-errors { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 2px; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
@@ -51,11 +52,11 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
                 @if (match().result) {
                   <div class="winner-toggle">
                     <button type="button" class="btn btn-sm" [class.btn-winner]="winner === 'WonA'"
-                            (click)="pendingWinner.set('WonA')">{{ teamName(match().teamAId) }} wins</button>
+                            (click)="selectWinner('WonA')">{{ teamName(match().teamAId) }} wins</button>
                     <button type="button" class="btn btn-sm" [class.btn-winner]="winner === 'WonB'"
-                            (click)="pendingWinner.set('WonB')">{{ teamName(match().teamBId) }} wins</button>
+                            (click)="selectWinner('WonB')">{{ teamName(match().teamBId) }} wins</button>
                     <button type="button" class="btn btn-sm" [class.btn-danger]="winner === 'NoResult'"
-                            (click)="pendingWinner.set('NoResult')">No Result</button>
+                            (click)="selectWinner('NoResult')">No Result</button>
                   </div>
                 }
                 @if (winner === 'NoResult') {
@@ -66,6 +67,13 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
                     [teamALabel]="teamName(match().teamAId)"
                     [teamBLabel]="teamName(match().teamBId)"
                     [(value)]="scoreValue" />
+                }
+                @if (resultErrors().length > 0) {
+                  <ul class="score-prompt-errors">
+                    @for (e of resultErrors(); track e) {
+                      <li class="error">{{ e }}</li>
+                    }
+                  </ul>
                 }
                 <div class="score-prompt-actions">
                   <button type="button" class="btn btn-primary" [disabled]="submitting()" (click)="confirmReport()">Confirm</button>
@@ -114,6 +122,7 @@ export class MatchFormComponent implements OnInit {
   pendingWinner = signal<'WonA' | 'WonB' | 'NoResult' | null>(null);
   scoreValue    = signal<string | null>(null);
   submitting    = signal(false);
+  resultErrors  = signal<string[]>([]);
 
   constructor(
     private matchService: MatchService,
@@ -167,6 +176,7 @@ export class MatchFormComponent implements OnInit {
 
   startReport(winner: 'WonA' | 'WonB'): void {
     this.error.set('');
+    this.resultErrors.set([]);
     this.scoreValue.set(this.initialScoreValue(this.match()));
     this.pendingWinner.set(winner);
   }
@@ -174,13 +184,20 @@ export class MatchFormComponent implements OnInit {
   startChangeResult(): void {
     const m = this.match();
     this.error.set('');
+    this.resultErrors.set([]);
     this.scoreValue.set(this.initialScoreValue(m));
     this.pendingWinner.set(m.result as 'WonA' | 'WonB');
+  }
+
+  selectWinner(winner: 'WonA' | 'WonB' | 'NoResult'): void {
+    this.resultErrors.set([]);
+    this.pendingWinner.set(winner);
   }
 
   cancelReport(): void {
     this.pendingWinner.set(null);
     this.scoreValue.set(null);
+    this.resultErrors.set([]);
   }
 
   confirmReport(): void {
@@ -188,17 +205,43 @@ export class MatchFormComponent implements OnInit {
     if (!winner) return;
 
     const m = this.match();
+
+    if (winner === 'NoResult') {
+      this.submitting.set(true);
+      this.matchService.deleteResult(this.tournamentId, m.id).subscribe({
+        next: () => this.router.navigate(['/tournaments', this.tournamentId, 'matches']),
+        error: err => {
+          this.submitting.set(false);
+          this.error.set(err.error?.detail ?? 'Set result failed.');
+        }
+      });
+      return;
+    }
+
+    const result = this.scoreValue();
+
     this.submitting.set(true);
+    this.error.set('');
+    this.resultErrors.set([]);
+    this.matchService.checkWinner(this.tournamentId, m.id, winner, result).subscribe({
+      next: errors => {
+        if (errors.length > 0) {
+          this.submitting.set(false);
+          this.resultErrors.set(errors);
+          return;
+        }
 
-    const request$ = winner === 'NoResult'
-      ? this.matchService.deleteResult(this.tournamentId, m.id)
-      : this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue());
-
-    request$.subscribe({
-      next: () => this.router.navigate(['/tournaments', this.tournamentId, 'matches']),
+        this.matchService.setWinner(this.tournamentId, m.id, winner, result).subscribe({
+          next: () => this.router.navigate(['/tournaments', this.tournamentId, 'matches']),
+          error: err => {
+            this.submitting.set(false);
+            this.error.set(err.error?.detail ?? 'Set result failed.');
+          }
+        });
+      },
       error: err => {
         this.submitting.set(false);
-        this.error.set(err.error?.detail ?? 'Set result failed.');
+        this.error.set(err.error?.detail ?? 'Check result failed.');
       }
     });
   }

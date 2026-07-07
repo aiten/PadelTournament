@@ -177,6 +177,36 @@ public static class MatchEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        routeUser.MapPut("/{id:int}/checkresult", async (int tournamentId, int id, SetWinnerDto dto, IMatchService matchService, ITransactionProvider transactionProvider) =>
+            {
+                var match = await matchService.SingleMatchAsync(id);
+                EndpointTools.CheckTournamentId(tournamentId, match.TournamentId);
+
+                var winner = EntityResult(dto.Winner);
+
+                if (winner is null)
+                {
+                    return Results.Problem(
+                        statusCode: StatusCodes.Status400BadRequest,
+                        title: "Invalid winner",
+                        detail: "Winner must be 'WonA' or 'WonB'");
+                }
+
+                using var trans = await transactionProvider.BeginTransactionAsync();
+                var       sets  = EndpointTools.ParseSets(dto.Result);
+
+                var errors = await matchService.CheckResultAsync(id, winner.Value, sets);
+
+                await trans.CommitTransactionAsync();
+
+                return Results.Ok(errors);
+            })
+            .WithName("CheckMatchWinner")
+            .Produces<List<string>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
     }
 
     private static MatchResult? EntityResult(string? result)

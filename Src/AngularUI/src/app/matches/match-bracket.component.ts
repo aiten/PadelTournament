@@ -103,6 +103,7 @@ function cardTop(ri: number, ni: number): number {
     }
     .score-prompt-title { font-size: 1rem; font-weight: 600; color: #334155; }
     .score-prompt-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .score-prompt-errors { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 2px; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
@@ -122,6 +123,13 @@ function cardTop(ri: number, ni: number): number {
             [teamALabel]="teamName(promptMatch.teamAId)"
             [teamBLabel]="teamName(promptMatch.teamBId)"
             [(value)]="scoreValue" />
+          @if (resultErrors().length > 0) {
+            <ul class="score-prompt-errors">
+              @for (e of resultErrors(); track e) {
+                <li class="error">{{ e }}</li>
+              }
+            </ul>
+          }
           @if (reportError()) {
             <p class="error">{{ reportError() }}</p>
           }
@@ -202,6 +210,7 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
   scoreValue    = signal<string | null>(null);
   submitting    = signal(false);
   reportError   = signal('');
+  resultErrors  = signal<string[]>([]);
 
   containerWidth = signal(window.innerWidth);
 
@@ -374,6 +383,7 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
 
   startReport(m: Match, winner: 'WonA' | 'WonB'): void {
     this.reportError.set('');
+    this.resultErrors.set([]);
     this.scoreValue.set(this.initialScoreValue(m));
     this.pendingWinner.set(winner);
     this.scorePrompt.set(m);
@@ -383,25 +393,43 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     this.scorePrompt.set(null);
     this.pendingWinner.set(null);
     this.scoreValue.set(null);
+    this.resultErrors.set([]);
   }
 
   confirmReport(m: Match): void {
     const winner = this.pendingWinner();
     if (!winner) return;
 
+    const result = this.scoreValue();
+
     this.submitting.set(true);
     this.reportError.set('');
-    this.matchService.setWinner(this.tournamentId, m.id, winner, this.scoreValue()).subscribe({
-      next: () => {
-        this.submitting.set(false);
-        this.scorePrompt.set(null);
-        this.pendingWinner.set(null);
-        this.scoreValue.set(null);
-        this.loadMatches();
+    this.resultErrors.set([]);
+    this.matchService.checkWinner(this.tournamentId, m.id, winner, result).subscribe({
+      next: errors => {
+        if (errors.length > 0) {
+          this.submitting.set(false);
+          this.resultErrors.set(errors);
+          return;
+        }
+
+        this.matchService.setWinner(this.tournamentId, m.id, winner, result).subscribe({
+          next: () => {
+            this.submitting.set(false);
+            this.scorePrompt.set(null);
+            this.pendingWinner.set(null);
+            this.scoreValue.set(null);
+            this.loadMatches();
+          },
+          error: err => {
+            this.submitting.set(false);
+            this.reportError.set(err.error?.detail ?? 'Set winner failed.');
+          }
+        });
       },
       error: err => {
         this.submitting.set(false);
-        this.reportError.set(err.error?.detail ?? 'Set winner failed.');
+        this.reportError.set(err.error?.detail ?? 'Check result failed.');
       }
     });
   }

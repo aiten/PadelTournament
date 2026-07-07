@@ -25,6 +25,10 @@ export class MatchService {
     return this.http.put<void>(`${this.baseUrl}/${tournamentId}/matches/${id}/winner`, { winner, result });
   }
 
+  checkWinner(tournamentId: number, id: number, winner: 'WonA' | 'WonB', result?: string | null): Observable<string[]> {
+    return this.http.put<string[]>(`${this.baseUrl}/${tournamentId}/matches/${id}/checkresult`, { winner, result });
+  }
+
   deleteResult(tournamentId: number, id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${tournamentId}/matches/${id}/result`);
   }
