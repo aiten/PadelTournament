@@ -24,36 +24,6 @@ public record PublicMatchResultDto(bool Won, string? Result = null);
 
 public static class PublicEndpoints
 {
-    // Parses a comma-separated set score list, e.g. "6:4, 6:3, 6:5(2)", into set results.
-    internal static List<SetResultOverview>? ParseSets(string? result)
-    {
-        if (string.IsNullOrEmpty(result))
-        {
-            return null;
-        }
-
-        return result.Split(',')
-            .Select((setScore, index) =>
-            {
-                var  col         = setScore.Trim().Split('-', ':');
-                int? tieBreak    = null;
-                int  tieBreakIdx = col[1].IndexOf('(');
-                if (tieBreakIdx != -1)
-                {
-                    tieBreak = int.Parse(col[1].Substring(tieBreakIdx + 1, col[1].IndexOf(')') - tieBreakIdx - 1));
-                    col[1]   = col[1].Substring(0, tieBreakIdx);
-                }
-
-                return new SetResultOverview(
-                    index + 1,
-                    int.Parse(col[0]),
-                    int.Parse(col[1]),
-                    tieBreak,
-                    new List<GameResultOverview>());
-            })
-            .ToList();
-    }
-
     public static void MapPublicEndpoints(this IEndpointRouteBuilder app, string baseRoute)
     {
         var routeTeam = app
@@ -106,7 +76,7 @@ public static class PublicEndpoints
                     : (dto.Won ? MatchResult.WonB : MatchResult.WonA);
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
-                await matchService.AcceptResultAsync(matchId, isForA, winner, ParseSets(dto.Result));
+                await matchService.AcceptResultAsync(matchId, isForA, winner, EndpointTools.ParseSets(dto.Result));
 
                 await trans.CommitTransactionAsync();
 
@@ -159,5 +129,29 @@ public static class PublicEndpoints
             .WithName("GetPublicBracketMatches")
             .Produces<List<MatchDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        routeTeam.MapPut("/matches/{matchId:int}/resultCheck", async (string pin, string registrationCode, int matchId, PublicMatchResultDto dto, ITeamService teamService, IMatchService matchService, ITransactionProvider transactionProvider) =>
+            {
+                var team  = await teamService.SingleByRegistrationAsync(pin, registrationCode);
+                var match = await matchService.SingleMatchForTeamAsync(matchId, team.Id);
+
+                var isForA = match.TeamAId == team.Id;
+                var winner = isForA
+                    ? (dto.Won ? MatchResult.WonA : MatchResult.WonB)
+                    : (dto.Won ? MatchResult.WonB : MatchResult.WonA);
+
+                using var trans = await transactionProvider.BeginTransactionAsync();
+ 
+                var errors = await matchService.CheckResultAsync(matchId, winner, EndpointTools.ParseSets(dto.Result)!);
+
+                await trans.CommitTransactionAsync();
+
+                return Results.Ok(errors);
+            })
+            .WithName("CheckResultMatchResult")
+            .WithValidation<PublicMatchResultDto>()
+            .Produces<List<string>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

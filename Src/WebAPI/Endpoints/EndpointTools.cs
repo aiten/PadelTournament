@@ -1,5 +1,10 @@
 namespace WebAPI.Endpoints;
 
+using System.Collections.Generic;
+using System.Linq;
+
+using Persistence.QueryResult;
+
 using Shared.Exceptions;
 
 public static class EndpointTools
@@ -27,4 +32,35 @@ public static class EndpointTools
             throw new IllegalValuesException("The TournamentId in the body does not match the URL");
         }
     }
+
+    // Parses a comma-separated set score list, e.g. "6:4, 6:3, 6:5(2)", into set results.
+    internal static List<SetResultOverview>? ParseSets(string? result)
+    {
+        if (string.IsNullOrEmpty(result))
+        {
+            return null;
+        }
+
+        return result.Split(',')
+            .Select((setScore, index) =>
+            {
+                var  col         = setScore.Trim().Split('-', ':');
+                int? tieBreak    = null;
+                int  tieBreakIdx = col[1].IndexOf('(');
+                if (tieBreakIdx != -1)
+                {
+                    tieBreak = int.Parse(col[1].Substring(tieBreakIdx + 1, col[1].IndexOf(')') - tieBreakIdx - 1));
+                    col[1]   = col[1].Substring(0, tieBreakIdx);
+                }
+
+                return new SetResultOverview(
+                    index + 1,
+                    int.Parse(col[0]),
+                    int.Parse(col[1]),
+                    tieBreak,
+                    new List<GameResultOverview>());
+            })
+            .ToList();
+    }
+
 }

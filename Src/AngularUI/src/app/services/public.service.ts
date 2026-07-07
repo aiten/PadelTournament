@@ -25,6 +25,10 @@ export class PublicService {
     return this.http.put<void>(`${this.baseUrl(pin, code)}/matches/${matchId}/result`, { won, result });
   }
 
+  checkResult(pin: string, code: string, matchId: number, won: boolean, result?: string | null): Observable<string[]> {
+    return this.http.put<string[]>(`${this.baseUrl(pin, code)}/matches/${matchId}/resultCheck`, { won, result });
+  }
+
   getTournament(pin: string): Observable<Tournament> {
     return this.http.get<Tournament>(`/api/public/${pin}`);
   }

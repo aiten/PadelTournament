@@ -158,7 +158,7 @@ public static class MatchEndpoints
                 }
 
                 using var trans = await transactionProvider.BeginTransactionAsync();
-                var sets = PublicEndpoints.ParseSets(dto.Result);
+                var sets = EndpointTools.ParseSets(dto.Result);
 
                 if (match.Result is null)
                 {

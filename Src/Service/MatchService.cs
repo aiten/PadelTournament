@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 
 using Base.Persistence;
 
+using System;
+
 public interface IMatchService
 {
     Task<Match> SingleMatchAsync(int id, params string[] includeProperties);
@@ -33,6 +35,8 @@ public interface IMatchService
     Task ChangeResultAsync(int matchId, MatchResult winner, IList<SetResultOverview>? sets);
 
     Task AcceptResultAsync(int matchId, bool forTeamA, MatchResult result, IList<SetResultOverview>? sets);
+
+    Task<IEnumerable<string>> CheckResultAsync(int matchId, MatchResult result, IList<SetResultOverview>? sets);
 }
 
 public class MatchService : IMatchService
@@ -339,5 +343,92 @@ public class MatchService : IMatchService
         }
 
         return match;
+    }
+
+    public async Task<IEnumerable<string>> CheckResultAsync(int matchId, MatchResult result, IList<SetResultOverview>? sets)
+    {
+        if (sets == null || sets.Count == 0)
+        {
+            return new List<string>();
+        }
+
+        var match = await GetActiveMatchAsync(matchId);
+
+        var errors = CheckResultTennis(3, 6, 1, result, sets);
+
+        return errors;
+    }
+
+    private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minDiff, MatchResult result, IList<SetResultOverview> sets)
+    {
+        int minWin           = bestOf / 2 + 1; // int div
+        int maxGamesToWinSet = minGamesToWinSet + minDiff - 1;
+        int tiebreakMinDiff  = 2;
+
+        var errors = new List<string>();
+
+        errors = sets.SelectMany((set, index) =>
+        {
+            var err = new List<string>();
+
+            int  maxScore     = Math.Max(set.ScoreA, set.ScoreB);
+            int  minScore     = Math.Min(set.ScoreA, set.ScoreB);
+            bool needTiebreak = false;
+
+            if (Math.Abs(set.ScoreB - set.ScoreA) < minDiff && (minDiff < 2 || maxScore != maxGamesToWinSet))
+            {
+                err.Add($"Set {index + 1}: Difference must be greater or equal {minDiff}");
+            }
+
+            if (maxScore < minGamesToWinSet)
+            {
+                err.Add($"Set {index + 1}: Won games must be greater or equal to {minGamesToWinSet}");
+            }
+
+            if (maxScore > maxGamesToWinSet)
+            {
+                err.Add($"Set {index + 1}: Won games must be less or equal to {maxGamesToWinSet}");
+            }
+
+            if (minDiff > 1)
+            {
+                if (maxScore == maxGamesToWinSet && maxScore - minScore > minDiff)
+                {
+                    err.Add($"Set {index + 1}: Won sets cannot be {maxGamesToWinSet} if other has less than {maxGamesToWinSet - minDiff}");
+                }
+
+                if (maxScore == maxGamesToWinSet && minScore == maxGamesToWinSet - 1)
+                {
+                    needTiebreak = true;
+                    if ((set.TieBreakPoints ?? 0) < tiebreakMinDiff)
+                    {
+                        err.Add($"Set {index + 1}: Tiebreak points must be >= {tiebreakMinDiff}");
+                    }
+                }
+            }
+
+            if (needTiebreak == false && set.TieBreakPoints is not null)
+            {
+                err.Add($"Set {index + 1}: Tiebreak not allowed {set.TieBreakPoints ?? 0}");
+            }
+
+            return err;
+        }).ToList();
+        ;
+
+        int wonASets = sets.Count(s => s.ScoreA > s.ScoreB);
+        int wonBSets = sets.Count(s => s.ScoreA < s.ScoreB);
+
+        if (wonASets + wonBSets > bestOf)
+        {
+            errors.Add($"Invalid number of sets ({wonASets + wonBSets}). Must be less than or equal to {bestOf}");
+        }
+        else if ((wonASets != minWin && result == MatchResult.WonA) || (wonBSets != minWin && result == MatchResult.WonB))
+        {
+            string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
+            errors.Add($"Invalid match result. {teamName} did not win the required number of sets ({minWin}).");
+        }
+
+        return errors;
     }
 }

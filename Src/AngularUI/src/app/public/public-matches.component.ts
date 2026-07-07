@@ -33,6 +33,7 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
     .score-prompt-row td { background: #f8fafc; }
     .score-prompt { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
     .score-prompt-actions { display: flex; gap: 8px; }
+    .score-prompt-errors { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 2px; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
@@ -107,6 +108,13 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
                           [teamALabel]="teamLabel(m.teamAId)"
                           [teamBLabel]="teamLabel(m.teamBId)"
                           [(value)]="scoreValue" />
+                        @if (resultErrors().length > 0) {
+                          <ul class="score-prompt-errors">
+                            @for (e of resultErrors(); track e) {
+                              <li class="error">{{ e }}</li>
+                            }
+                          </ul>
+                        }
                         <div class="score-prompt-actions">
                           <button type="button" class="btn btn-sm btn-primary"
                                   [disabled]="submitting()"
@@ -140,9 +148,10 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
   error       = signal('');
   reportError = signal('');
 
-  scorePrompt = signal<Match | null>(null);
-  scoreWon    = signal(false);
-  scoreValue  = signal<string | null>(null);
+  scorePrompt  = signal<Match | null>(null);
+  scoreWon     = signal(false);
+  scoreValue   = signal<string | null>(null);
+  resultErrors = signal<string[]>([]);
 
   pin       = '';
   code      = '';
@@ -269,6 +278,7 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
 
   startReport(m: Match, won: boolean): void {
     this.reportError.set('');
+    this.resultErrors.set([]);
     this.scoreValue.set(this.initialScoreValue(m));
     this.scoreWon.set(won);
     this.scorePrompt.set(m);
@@ -286,23 +296,40 @@ export class PublicMatchesComponent implements OnInit, OnDestroy {
   cancelReport(): void {
     this.scorePrompt.set(null);
     this.scoreValue.set(null);
+    this.resultErrors.set([]);
   }
 
   confirmReport(m: Match): void {
     const result = this.scoreValue();
+    const won    = this.scoreWon();
 
     this.submitting.set(true);
     this.reportError.set('');
-    this.publicService.reportResult(this.pin, this.code, m.id, this.scoreWon(), result).subscribe({
-      next: () => {
-        this.submitting.set(false);
-        this.scorePrompt.set(null);
-        this.scoreValue.set(null);
-        this.reloadMatches();
+    this.resultErrors.set([]);
+    this.publicService.checkResult(this.pin, this.code, m.id, won, result).subscribe({
+      next: errors => {
+        if (errors.length > 0) {
+          this.submitting.set(false);
+          this.resultErrors.set(errors);
+          return;
+        }
+
+        this.publicService.reportResult(this.pin, this.code, m.id, won, result).subscribe({
+          next: () => {
+            this.submitting.set(false);
+            this.scorePrompt.set(null);
+            this.scoreValue.set(null);
+            this.reloadMatches();
+          },
+          error: err => {
+            this.submitting.set(false);
+            this.reportError.set(err.error?.detail ?? 'Failed to report result.');
+          }
+        });
       },
       error: err => {
         this.submitting.set(false);
-        this.reportError.set(err.error?.detail ?? 'Failed to report result.');
+        this.reportError.set(err.error?.detail ?? 'Failed to check result.');
       }
     });
   }
