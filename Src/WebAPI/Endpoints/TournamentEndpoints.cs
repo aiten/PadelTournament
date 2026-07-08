@@ -23,27 +23,12 @@ public record TournamentDto(
     DateOnly  From,
     DateOnly? To,
     string    RegistrationPin,
-    string?   Format     = null,
-    int       BestOf        = 3,
-    int       GamesToWinSet = 6,
-    int       MinDiff       = 2,
-    bool      NoAdv         = false
+    int?      FormatId = null
 );
 
 public static class TournamentEndpoints
 {
     #region Dto-Entity Mapping
-
-    private static Format? EntityFormat(string? format)
-    {
-        return format switch
-        {
-            "Tennis" => Format.Tennis,
-            "Padel"  => Format.Padel,
-            "Soccer" => Format.Soccer,
-            _        => null
-        };
-    }
 
     private static Tournament ToEntity(TournamentDto dto)
     {
@@ -54,11 +39,7 @@ public static class TournamentEndpoints
             From            = dto.From,
             To              = dto.To,
             RegistrationPin = dto.RegistrationPin,
-            Format       = EntityFormat(dto.Format),
-            BestOf          = dto.BestOf,
-            GamesToWinSet   = dto.GamesToWinSet,
-            MinDiff         = dto.MinDiff,
-            NoAdv           = dto.NoAdv
+            FormatId        = dto.FormatId
         };
     }
 
@@ -75,11 +56,7 @@ public static class TournamentEndpoints
             entity.From,
             entity.To,
             entity.RegistrationPin,
-            entity.Format?.ToString(),
-            entity.BestOf,
-            entity.GamesToWinSet,
-            entity.MinDiff,
-            entity.NoAdv
+            entity.FormatId
         );
     }
 

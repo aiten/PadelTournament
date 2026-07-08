@@ -17,7 +17,7 @@ using Persistence;
 using Service;
 
 /// <summary>
-/// Hosts the WebAPI with the Service-layer (ITournamentService/ITeamService/IMatchService) replaced by
+/// Hosts the WebAPI with the Service-layer (ITournamentService/ITeamService/IMatchService/IFormatService) replaced by
 /// NSubstitute mocks, so endpoint tests exercise routing, auth, validation and status-code mapping without
 /// a real database.
 /// </summary>
@@ -26,6 +26,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public ITournamentService   TournamentService   { get; } = Substitute.For<ITournamentService>();
     public ITeamService         TeamService         { get; } = Substitute.For<ITeamService>();
     public IMatchService        MatchService        { get; } = Substitute.For<IMatchService>();
+    public IFormatService       FormatService       { get; } = Substitute.For<IFormatService>();
     public ITransactionProvider TransactionProvider { get; } = Substitute.For<ITransactionProvider>();
     public ICurrentUserService  CurrentUserService  { get; } = Substitute.For<ICurrentUserService>();
     public TestAuthContext      TestAuth            { get; } = new();
@@ -44,6 +45,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         TournamentService.ClearReceivedCalls();
         TeamService.ClearReceivedCalls();
         MatchService.ClearReceivedCalls();
+        FormatService.ClearReceivedCalls();
         TransactionProvider.ClearReceivedCalls();
         CurrentUserService.ClearReceivedCalls();
         TestAuth.IsAuthenticated = true;
@@ -63,6 +65,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                             d.ServiceType == typeof(ITournamentService) ||
                             d.ServiceType == typeof(ITeamService) ||
                             d.ServiceType == typeof(IMatchService) ||
+                            d.ServiceType == typeof(IFormatService) ||
                             d.ServiceType == typeof(ICurrentUserService) ||
                             (d.ServiceType.FullName != null && d.ServiceType.FullName.Contains("DbContext")) ||
                             (d.ImplementationType != null && d.ImplementationType.Assembly == persistenceAssembly))
@@ -92,6 +95,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<ITournamentService>(_ => TournamentService);
             services.AddScoped<ITeamService>(_ => TeamService);
             services.AddScoped<IMatchService>(_ => MatchService);
+            services.AddScoped<IFormatService>(_ => FormatService);
             services.AddScoped<ITransactionProvider>(_ => TransactionProvider);
             services.AddScoped<ICurrentUserService>(_ => CurrentUserService);
         });

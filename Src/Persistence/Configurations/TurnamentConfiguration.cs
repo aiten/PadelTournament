@@ -20,5 +20,10 @@ public class TournamentConfiguration : IEntityTypeConfiguration<Tournament>
         builder.Property(j => j.RegistrationPin).AsRequiredText(5);
         builder.Property(j => j.Description).AsRequiredText(200);
         builder.Property(j => j.UserId).HasMaxLength(256);
+
+        builder.HasOne(t => t.Format)
+            .WithMany(f => f.Tournaments)
+            .HasForeignKey(t => t.FormatId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

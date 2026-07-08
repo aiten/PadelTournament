@@ -1,8 +1,10 @@
 import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Format, Tournament } from '../models/tournament.model';
+import { Tournament } from '../models/tournament.model';
+import { Format, PlayingFormat } from '../models/format.model';
 import { TournamentService } from '../services/tournament.service';
+import { FormatService } from '../services/format.service';
 
 @Component({
   selector: 'app-tournament-form',
@@ -34,32 +36,38 @@ import { TournamentService } from '../services/tournament.service';
         </div>
         <div class="form-group">
           <label>Format</label>
-          <select name="format" [(ngModel)]="tournament().format" class="form-control">
+          <select name="format" [(ngModel)]="tournament().formatId" class="form-control">
             <option [ngValue]="null">-</option>
-            @for (ct of formats; track ct) {
-              <option [ngValue]="ct">{{ ct }}</option>
+            @for (f of formats(); track f.id) {
+              <option [ngValue]="f.id">{{ f.name }}</option>
             }
           </select>
         </div>
-        @if (tournament().format === Format.Tennis || tournament().format === Format.Padel) {
+        @if (selectedFormat(); as sf) {
           <div class="form-group">
-            <label>Best Of *</label>
-            <input type="number" name="bestOf" [(ngModel)]="tournament().bestOf" required min="1" class="form-control" />
+            <label>Playing Format</label>
+            <input [value]="sf.playingFormat" class="form-control" disabled />
           </div>
-          <div class="form-group">
-            <label>Games To Win Set *</label>
-            <input type="number" name="gamesToWinSet" [(ngModel)]="tournament().gamesToWinSet" required min="1" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>Min Diff *</label>
-            <input type="number" name="minDiff" [(ngModel)]="tournament().minDiff" required min="1" class="form-control" />
-          </div>
-          <div class="form-group form-check">
-            <label>
-              <input type="checkbox" name="noAdv" [(ngModel)]="tournament().noAdv" />
-              No Advantage
-            </label>
-          </div>
+          @if (sf.playingFormat === PlayingFormat.Tennis || sf.playingFormat === PlayingFormat.Padel) {
+            <div class="form-group">
+              <label>Best Of</label>
+              <input [value]="sf.bestOf" class="form-control" disabled />
+            </div>
+            <div class="form-group">
+              <label>Games To Win Set</label>
+              <input [value]="sf.gamesToWinSet" class="form-control" disabled />
+            </div>
+            <div class="form-group">
+              <label>Min Diff</label>
+              <input [value]="sf.minDiff" class="form-control" disabled />
+            </div>
+            <div class="form-group form-check">
+              <label>
+                <input type="checkbox" [checked]="sf.noAdv" disabled />
+                No Advantage
+              </label>
+            </div>
+          }
         }
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" [disabled]="form.invalid || (tournament().from && tournament().to && tournament().from > tournament().to!)">Save</button>
@@ -83,26 +91,25 @@ export class TournamentFormComponent implements OnInit {
     from: '',
     to: null,
     registrationPin: null,
-    format: null,
-    bestOf: 3,
-    gamesToWinSet: 6,
-    minDiff: 2,
-    noAdv: false
+    formatId: null
   });
 
   isNew = true;
   error = signal('');
+  formats = signal<Format[]>([]);
 
-  readonly Format = Format;
-  readonly formats = Object.values(Format);
+  readonly PlayingFormat = PlayingFormat;
 
   constructor(
     private service: TournamentService,
+    private formatService: FormatService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.formatService.getAll().subscribe(f => this.formats.set(f));
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
       this.isNew = false;
@@ -116,6 +123,10 @@ export class TournamentFormComponent implements OnInit {
       next: () => this.router.navigate(['/tournaments']),
       error: (err: any) => this.error.set(err.error?.detail ?? 'Delete failed.')
     });
+  }
+
+  selectedFormat(): Format | null {
+    return this.formats().find(f => f.id === this.tournament().formatId) ?? null;
   }
 
   save(): void {

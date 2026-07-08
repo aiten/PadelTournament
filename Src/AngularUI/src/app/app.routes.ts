@@ -6,6 +6,8 @@ import { UserProfileComponent } from './user-profile/user-profile.component';
 import { canActivateAuthRole } from './guards/auth-role.guard';
 import { TournamentListComponent } from './tournaments/tournament-list.component';
 import { TournamentFormComponent } from './tournaments/tournament-form.component';
+import { FormatListComponent } from './formats/format-list.component';
+import { FormatFormComponent } from './formats/format-form.component';
 import { TeamListComponent } from './teams/team-list.component';
 import { TeamFormComponent } from './teams/team-form.component';
 import { TeamQrComponent } from './teams/team-qr.component';
@@ -23,6 +25,9 @@ import { PublicBracketComponent } from './public/public-bracket.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/public', pathMatch: 'full' },
+  { path: 'formats', component: FormatListComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.admin } },
+  { path: 'formats/new', component: FormatFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.admin } },
+  { path: 'formats/:id', component: FormatFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.admin } },
   { path: 'tournaments', component: TournamentListComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/new', component: TournamentFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },
   { path: 'tournaments/:id', component: TournamentFormComponent, canActivate: [canActivateAuthRole], data: { role: environment.roles.user } },

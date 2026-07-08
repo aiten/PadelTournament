@@ -352,14 +352,18 @@ public class MatchService : IMatchService
             return new List<string>();
         }
 
-        var match = await SingleMatchAsync(matchId, nameof(Match.Tournament));
+        var match = await SingleMatchAsync(matchId, $"{nameof(Match.Tournament)}.{nameof(Tournament.Format)}");
 
-        switch (match.Tournament.Format)
+        switch (match.Tournament.Format?.PlayingFormat)
         {
-            case Format.Padel:
-            case Format.Tennis:
-                return CheckResultTennis(match.Tournament.BestOf, match.Tournament.GamesToWinSet, match.Tournament.MinDiff, result, sets);
-            case Format.Soccer:
+            case PlayingFormat.Padel:
+            case PlayingFormat.Tennis:
+                return CheckResultTennis(
+                    match.Tournament.Format.BestOf ?? 3,
+                    match.Tournament.Format.GamesToWinSet ?? 6,
+                    match.Tournament.Format.MinDiff ?? 2,
+                    result, sets);
+            case PlayingFormat.Soccer:
                 return CheckResultSoccer(result, sets);
             default:
                 return new List<string>();

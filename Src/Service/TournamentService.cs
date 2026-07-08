@@ -81,11 +81,7 @@ public class TournamentService : ITournamentService
         entity.From            = tournament.From;
         entity.To              = tournament.To;
         entity.Modified        = DateTime.Now;
-        entity.BestOf          = tournament.BestOf;
-        entity.Format       = tournament.Format;
-        entity.GamesToWinSet   = tournament.GamesToWinSet;
-        entity.NoAdv           = tournament.NoAdv;
-        entity.MinDiff         = tournament.MinDiff;
+        entity.FormatId        = tournament.FormatId;
 
         await _uow.SaveChangesAsync();
         await _hub.NotifyTournamentUpdatedAsync(id);

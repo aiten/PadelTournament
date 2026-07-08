@@ -164,7 +164,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
-    // Trust all proxies — nginx proxy manager IP can vary in Docker environments
+    // Trust all proxies ï¿½ nginx proxy manager IP can vary in Docker environments
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
@@ -236,6 +236,7 @@ app.MapGet("/api/ping", () => "pong")
     .WithTags("Health");
 //.RequireAuthorization(Settings.AdminPolicyName);
 
+app.MapFormatEndpoints("/api/format");
 app.MapTournamentEndpoints("/api/tournament");
 app.MapTeamEndpoints("/api/tournament");
 app.MapMatchEndpoints("/api/tournament");
