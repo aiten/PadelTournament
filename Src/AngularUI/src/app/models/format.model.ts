@@ -10,6 +10,7 @@ export interface Format {
   playingFormat: PlayingFormat | null;
   bestOf: number | null;
   gamesToWinSet: number | null;
-  minDiff: number | null;
+  minMargin: number | null;
   noAdv: boolean;
+  noTiebreak: boolean;
 }

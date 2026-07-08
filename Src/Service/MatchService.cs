@@ -361,7 +361,7 @@ public class MatchService : IMatchService
                 return CheckResultTennis(
                     match.Tournament.Format.BestOf ?? 3,
                     match.Tournament.Format.GamesToWinSet ?? 6,
-                    match.Tournament.Format.MinDiff ?? 2,
+                    match.Tournament.Format.MinMargin ?? 2,
                     result, sets);
             case PlayingFormat.Soccer:
                 return CheckResultSoccer(result, sets);
@@ -370,11 +370,11 @@ public class MatchService : IMatchService
         }
     }
 
-    private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minDiff, MatchResult result, IList<SetResultOverview> sets)
+    private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minMargin, MatchResult result, IList<SetResultOverview> sets)
     {
         int minWin           = bestOf / 2 + 1; // int div
-        int maxGamesToWinSet = minGamesToWinSet + minDiff - 1;
-        int tiebreakMinDiff  = 2;
+        int maxGamesToWinSet = minGamesToWinSet + minMargin - 1;
+        int tiebreakMinMargin  = 2;
 
         string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
 
@@ -386,9 +386,9 @@ public class MatchService : IMatchService
             int  minScore     = Math.Min(set.ScoreA, set.ScoreB);
             bool needTiebreak = false;
 
-            if (Math.Abs(set.ScoreB - set.ScoreA) < minDiff && (minDiff < 2 || maxScore != maxGamesToWinSet))
+            if (Math.Abs(set.ScoreB - set.ScoreA) < minMargin && (minMargin < 2 || maxScore != maxGamesToWinSet))
             {
-                err.Add($"Set {index + 1}: Difference must be greater or equal {minDiff}");
+                err.Add($"Set {index + 1}: Difference must be greater or equal {minMargin}");
             }
 
             if (maxScore < minGamesToWinSet)
@@ -401,19 +401,19 @@ public class MatchService : IMatchService
                 err.Add($"Set {index + 1}: Won games must be less or equal to {maxGamesToWinSet}");
             }
 
-            if (minDiff > 1)
+            if (minMargin > 1)
             {
-                if (maxScore == maxGamesToWinSet && maxScore - minScore > minDiff)
+                if (maxScore == maxGamesToWinSet && maxScore - minScore > minMargin)
                 {
-                    err.Add($"Set {index + 1}: Won sets cannot be {maxGamesToWinSet} if other has less than {maxGamesToWinSet - minDiff}");
+                    err.Add($"Set {index + 1}: Won sets cannot be {maxGamesToWinSet} if other has less than {maxGamesToWinSet - minMargin}");
                 }
 
                 if (maxScore == maxGamesToWinSet && minScore == maxGamesToWinSet - 1)
                 {
                     needTiebreak = true;
-                    if ((set.TieBreakPoints ?? 0) < tiebreakMinDiff)
+                    if ((set.TieBreakPoints ?? 0) < tiebreakMinMargin)
                     {
-                        err.Add($"Set {index + 1}: Tiebreak points must be >= {tiebreakMinDiff}");
+                        err.Add($"Set {index + 1}: Tiebreak points must be >= {tiebreakMinMargin}");
                     }
                 }
             }

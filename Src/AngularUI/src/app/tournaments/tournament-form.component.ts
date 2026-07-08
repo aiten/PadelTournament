@@ -58,13 +58,19 @@ import { FormatService } from '../services/format.service';
               <input [value]="sf.gamesToWinSet" class="form-control" disabled />
             </div>
             <div class="form-group">
-              <label>Min Diff</label>
-              <input [value]="sf.minDiff" class="form-control" disabled />
+              <label>Min Margin</label>
+              <input [value]="sf.minMargin" class="form-control" disabled />
             </div>
             <div class="form-group form-check">
               <label>
                 <input type="checkbox" [checked]="sf.noAdv" disabled />
                 No Advantage
+              </label>
+            </div>
+            <div class="form-group form-check">
+              <label>
+                <input type="checkbox" [checked]="sf.noTiebreak" disabled />
+                No Tiebreak
               </label>
             </div>
           }

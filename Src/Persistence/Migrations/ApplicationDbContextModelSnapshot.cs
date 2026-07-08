@@ -61,7 +61,7 @@ namespace Persistence.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Formats");
+                    b.ToTable("Formats", (string)null);
                 });
 
             modelBuilder.Entity("Persistence.Model.Game", b =>
@@ -97,7 +97,7 @@ namespace Persistence.Migrations
                     b.HasIndex("SetId", "No")
                         .IsUnique();
 
-                    b.ToTable("Games");
+                    b.ToTable("Games", (string)null);
                 });
 
             modelBuilder.Entity("Persistence.Model.Match", b =>
@@ -159,7 +159,7 @@ namespace Persistence.Migrations
                     b.HasIndex("TournamentId", "No", "Round")
                         .IsUnique();
 
-                    b.ToTable("Matches");
+                    b.ToTable("Matches", (string)null);
                 });
 
             modelBuilder.Entity("Persistence.Model.Set", b =>
@@ -195,7 +195,7 @@ namespace Persistence.Migrations
                     b.HasIndex("MatchId", "No")
                         .IsUnique();
 
-                    b.ToTable("Sets");
+                    b.ToTable("Sets", (string)null);
                 });
 
             modelBuilder.Entity("Persistence.Model.Team", b =>
@@ -249,7 +249,7 @@ namespace Persistence.Migrations
                         .IsUnique()
                         .HasFilter("[Player2] IS NOT NULL");
 
-                    b.ToTable("Teams");
+                    b.ToTable("Teams", (string)null);
                 });
 
             modelBuilder.Entity("Persistence.Model.Tournament", b =>
@@ -303,7 +303,7 @@ namespace Persistence.Migrations
                     b.HasIndex("RegistrationPin")
                         .IsUnique();
 
-                    b.ToTable("Tournaments");
+                    b.ToTable("Tournaments", (string)null);
                 });
 
             modelBuilder.Entity("Persistence.Model.Game", b =>

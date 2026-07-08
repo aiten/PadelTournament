@@ -25,8 +25,9 @@ import { FormatService } from '../services/format.service';
               <th>Playing Format</th>
               <th>Best Of</th>
               <th>Games To Win Set</th>
-              <th>Min Diff</th>
+              <th>Min Margin</th>
               <th>No Advantage</th>
+              <th>No Tiebreak</th>
               <th></th>
             </tr>
           </thead>
@@ -37,8 +38,9 @@ import { FormatService } from '../services/format.service';
                 <td>{{ f.playingFormat }}</td>
                 <td>{{ f.bestOf ?? '' }}</td>
                 <td>{{ f.gamesToWinSet ?? '' }}</td>
-                <td>{{ f.minDiff ?? '' }}</td>
+                <td>{{ f.minMargin ?? '' }}</td>
                 <td>{{ f.noAdv ? 'Yes' : 'No' }}</td>
+                <td>{{ f.noTiebreak ? 'Yes' : 'No' }}</td>
                 <td>
                   <a [routerLink]="['/formats', f.id]" class="btn btn-sm">Edit</a>
                   <button class="btn btn-sm btn-danger" (click)="deleteFormat(f.id, f.name)">Delete</button>

@@ -12,8 +12,9 @@ public class Format : EntityObject
 
     public int? BestOf        { get; set; } = 3;
     public int? GamesToWinSet { get; set; } = 6;
-    public int? MinDiff       { get; set; } = 2;
+    public int? MinMargin       { get; set; } = 2;
     public bool NoAdv         { get; set; } = false;
+    public bool NoTiebreak    { get; set; } = false;
 
     public ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();
 }

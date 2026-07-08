@@ -21,8 +21,9 @@ public record FormatDto(
     string  PlayingFormat,
     int?    BestOf        = 3,
     int?    GamesToWinSet = 6,
-    int?    MinDiff       = 2,
-    bool    NoAdv         = false
+    int?    MinMargin       = 2,
+    bool    NoAdv         = false,
+    bool    NoTiebreak    = false
 );
 
 public static class FormatEndpoints
@@ -49,8 +50,9 @@ public static class FormatEndpoints
             PlayingFormat = EntityPlayingFormat(dto.PlayingFormat) ?? default,
             BestOf        = dto.BestOf,
             GamesToWinSet = dto.GamesToWinSet,
-            MinDiff       = dto.MinDiff,
-            NoAdv         = dto.NoAdv
+            MinMargin       = dto.MinMargin,
+            NoAdv         = dto.NoAdv,
+            NoTiebreak    = dto.NoTiebreak
         };
     }
 
@@ -67,8 +69,9 @@ public static class FormatEndpoints
             entity.PlayingFormat.ToString(),
             entity.BestOf,
             entity.GamesToWinSet,
-            entity.MinDiff,
-            entity.NoAdv
+            entity.MinMargin,
+            entity.NoAdv,
+            entity.NoTiebreak
         );
     }
 

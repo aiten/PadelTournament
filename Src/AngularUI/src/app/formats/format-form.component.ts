@@ -36,13 +36,19 @@ import { FormatService } from '../services/format.service';
             <input type="number" name="gamesToWinSet" [(ngModel)]="format().gamesToWinSet" required min="1" class="form-control" />
           </div>
           <div class="form-group">
-            <label>Min Diff *</label>
-            <input type="number" name="minDiff" [(ngModel)]="format().minDiff" required min="1" class="form-control" />
+            <label>Min Margin *</label>
+            <input type="number" name="minMargin" [(ngModel)]="format().minMargin" required min="1" class="form-control" />
           </div>
           <div class="form-group form-check">
             <label>
               <input type="checkbox" name="noAdv" [(ngModel)]="format().noAdv" />
               No Advantage
+            </label>
+          </div>
+          <div class="form-group form-check">
+            <label>
+              <input type="checkbox" name="noTiebreak" [(ngModel)]="format().noTiebreak" />
+              No Tiebreak
             </label>
           </div>
         }
@@ -64,8 +70,9 @@ export class FormatFormComponent implements OnInit {
     playingFormat: null,
     bestOf: 3,
     gamesToWinSet: 6,
-    minDiff: 2,
-    noAdv: false
+    minMargin: 2,
+    noAdv: false,
+    noTiebreak: false
   });
 
   isNew = true;

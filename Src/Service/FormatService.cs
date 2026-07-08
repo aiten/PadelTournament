@@ -61,8 +61,9 @@ public class FormatService : IFormatService
         entity.PlayingFormat = format.PlayingFormat;
         entity.BestOf        = format.BestOf;
         entity.GamesToWinSet = format.GamesToWinSet;
-        entity.MinDiff       = format.MinDiff;
+        entity.MinMargin       = format.MinMargin;
         entity.NoAdv         = format.NoAdv;
+        entity.NoTiebreak    = format.NoTiebreak;
 
         await _uow.SaveChangesAsync();
     }

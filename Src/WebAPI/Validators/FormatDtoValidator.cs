@@ -28,10 +28,10 @@ public class FormatDtoValidator : AbstractValidator<FormatDto>
             .WithMessage("GamesToWinSet must be greater than 0.")
             .When(x => x.PlayingFormat is "Tennis" or "Padel");
 
-        RuleFor(x => x.MinDiff)
+        RuleFor(x => x.MinMargin)
             .NotNull()
             .GreaterThan(0)
-            .WithMessage("MinDiff must be greater than 0.")
+            .WithMessage("MinMargin must be greater than 0.")
             .When(x => x.PlayingFormat is "Tennis" or "Padel");
     }
 }
