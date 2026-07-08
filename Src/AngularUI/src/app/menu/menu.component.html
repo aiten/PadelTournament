@@ -1,5 +1,6 @@
 <nav class="menu">
-  <div class="developer-status"><strong>Keycloak Events:</strong> {{ keycloakStatus }}</div>
+  <div><strong>Padel / Tennis / Soccer Tournament</strong></div>
+
 
   <div class="actions">
 
@@ -21,5 +22,12 @@
     } @else {
     <button class="action-item" (click)="logout()">Logout</button>
     }
+
+    <!---
+    @if (authenticated) {
+      <div class="developer-status"><strong>Keycloak Events:</strong> {{ keycloakStatus }}</div>
+    }
+    --> 
+
   </div>
 </nav>
