@@ -22,12 +22,11 @@ function parseValue(value: string | null): SetScore[] {
   return sets.length ? sets : [emptySet()];
 }
 
-/** A completed set can never end 0:0, so that's treated as "not entered yet". */
+/** A single 0:0 set means nothing has been entered yet. Once a second set is added, even a 0:0 score counts as a real result. */
 function formatValue(sets: SetScore[]): string | null {
-  const complete = sets.filter(s => !(s.scoreA === 0 && s.scoreB === 0));
-  if (!complete.length) return null;
+  if (sets.length === 1 && sets[0].scoreA === 0 && sets[0].scoreB === 0) return null;
 
-  return complete
+  return sets
     .map(s => `${s.scoreA}:${s.scoreB}${s.tieBreak !== null ? `(${s.tieBreak})` : ''}`)
     .join(', ');
 }
