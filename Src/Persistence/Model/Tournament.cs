@@ -19,7 +19,7 @@ public class Tournament : EntityObject
 
     public required string RegistrationPin { get; set; }
 
-    public CountType? CountType { get; set; }
+    public Format? Format { get; set; }
 
     public int  BestOf        { get; set; } = 3;
     public int  GamesToWinSet { get; set; } = 6;

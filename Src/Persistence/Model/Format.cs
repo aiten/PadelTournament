@@ -1,6 +1,6 @@
 namespace Persistence.Model;
 
-public enum CountType
+public enum Format
 {
     Tennis,
     Padel,

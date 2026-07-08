@@ -1,4 +1,4 @@
-export enum CountType {
+export enum Format {
   Tennis = 'Tennis',
   Padel = 'Padel',
   Soccer = 'Soccer'
@@ -10,7 +10,7 @@ export interface Tournament {
   from: string;
   to: string | null;
   registrationPin: string | null;
-  countType: CountType | null;
+  format: Format | null;
   bestOf: number;
   gamesToWinSet: number;
   minDiff: number;

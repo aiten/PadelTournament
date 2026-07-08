@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { CountType, Tournament } from '../models/tournament.model';
+import { Format, Tournament } from '../models/tournament.model';
 import { TournamentService } from '../services/tournament.service';
 
 @Component({
@@ -33,15 +33,15 @@ import { TournamentService } from '../services/tournament.service';
           <input type="text" name="registrationPin" [(ngModel)]="tournament().registrationPin" maxlength="5" pattern="[0-9]{5}" class="form-control" />
         </div>
         <div class="form-group">
-          <label>Count Type</label>
-          <select name="countType" [(ngModel)]="tournament().countType" class="form-control">
+          <label>Format</label>
+          <select name="format" [(ngModel)]="tournament().format" class="form-control">
             <option [ngValue]="null">-</option>
-            @for (ct of countTypes; track ct) {
+            @for (ct of formats; track ct) {
               <option [ngValue]="ct">{{ ct }}</option>
             }
           </select>
         </div>
-        @if (tournament().countType === CountType.Tennis || tournament().countType === CountType.Padel) {
+        @if (tournament().format === Format.Tennis || tournament().format === Format.Padel) {
           <div class="form-group">
             <label>Best Of *</label>
             <input type="number" name="bestOf" [(ngModel)]="tournament().bestOf" required min="1" class="form-control" />
@@ -83,7 +83,7 @@ export class TournamentFormComponent implements OnInit {
     from: '',
     to: null,
     registrationPin: null,
-    countType: null,
+    format: null,
     bestOf: 3,
     gamesToWinSet: 6,
     minDiff: 2,
@@ -93,8 +93,8 @@ export class TournamentFormComponent implements OnInit {
   isNew = true;
   error = signal('');
 
-  readonly CountType = CountType;
-  readonly countTypes = Object.values(CountType);
+  readonly Format = Format;
+  readonly formats = Object.values(Format);
 
   constructor(
     private service: TournamentService,

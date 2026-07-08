@@ -352,11 +352,17 @@ public class MatchService : IMatchService
             return new List<string>();
         }
 
-        var match = await GetActiveMatchAsync(matchId);
+        var match = await SingleMatchAsync(matchId, nameof(Match.Tournament));
 
-        var errors = CheckResultTennis(3, 6, 1, result, sets);
-
-        return errors;
+        switch (match.Tournament.Format)
+        {
+            case Format.Padel:
+            case Format.Tennis:
+                var errors = CheckResultTennis(match.Tournament.BestOf, match.Tournament.GamesToWinSet, match.Tournament.MinDiff, result, sets);
+                return errors;
+            default:
+                throw new NotSupportedException($"Tournament format not supported: {match.Tournament.Format}");
+        }
     }
 
     private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minDiff, MatchResult result, IList<SetResultOverview> sets)
@@ -365,15 +371,16 @@ public class MatchService : IMatchService
         int maxGamesToWinSet = minGamesToWinSet + minDiff - 1;
         int tiebreakMinDiff  = 2;
 
-        var errors = new List<string>();
+        var    errors   = new List<string>();
+        string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
 
         errors = sets.SelectMany((set, index) =>
         {
             var err = new List<string>();
 
-            int  maxScore     = Math.Max(set.ScoreA, set.ScoreB);
-            int  minScore     = Math.Min(set.ScoreA, set.ScoreB);
-            bool needTiebreak = false;
+            int    maxScore     = Math.Max(set.ScoreA, set.ScoreB);
+            int    minScore     = Math.Min(set.ScoreA, set.ScoreB);
+            bool   needTiebreak = false;
 
             if (Math.Abs(set.ScoreB - set.ScoreA) < minDiff && (minDiff < 2 || maxScore != maxGamesToWinSet))
             {
@@ -425,8 +432,14 @@ public class MatchService : IMatchService
         }
         else if ((wonASets != minWin && result == MatchResult.WonA) || (wonBSets != minWin && result == MatchResult.WonB))
         {
-            string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
             errors.Add($"Invalid match result. {teamName} did not win the required number of sets ({minWin}).");
+        }
+
+        var last = sets.Last();
+        if (result == MatchResult.WonA && last.ScoreA < last.ScoreB ||
+            result == MatchResult.WonB && last.ScoreA > last.ScoreB)
+        {
+            errors.Add($"Invalid match result. {teamName} did not win the last set.");
         }
 
         return errors;

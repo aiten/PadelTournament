@@ -82,7 +82,7 @@ public class TournamentService : ITournamentService
         entity.To              = tournament.To;
         entity.Modified        = DateTime.Now;
         entity.BestOf          = tournament.BestOf;
-        entity.CountType       = tournament.CountType;
+        entity.Format       = tournament.Format;
         entity.GamesToWinSet   = tournament.GamesToWinSet;
         entity.NoAdv           = tournament.NoAdv;
         entity.MinDiff         = tournament.MinDiff;
