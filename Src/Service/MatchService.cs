@@ -362,7 +362,7 @@ public class MatchService : IMatchService
             case Format.Soccer:
                 return CheckResultSoccer(result, sets);
             default:
-                throw new NotSupportedException($"Tournament format not supported: {match.Tournament.Format}");
+                return new List<string>();
         }
     }
 
@@ -372,10 +372,9 @@ public class MatchService : IMatchService
         int maxGamesToWinSet = minGamesToWinSet + minDiff - 1;
         int tiebreakMinDiff  = 2;
 
-        var    errors   = new List<string>();
         string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
 
-        errors = sets.SelectMany((set, index) =>
+        var errors = sets.SelectMany((set, index) =>
         {
             var err = new List<string>();
 
@@ -448,14 +447,12 @@ public class MatchService : IMatchService
 
     private IEnumerable<string> CheckResultSoccer(MatchResult result, IList<SetResultOverview> sets)
     {
-        var errors = new List<string>();
-
         string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
 
         int scoreA = 0;
         int scoreB = 0;
 
-        errors = sets.SelectMany((set, index) =>
+        var errors = sets.SelectMany((set, index) =>
         {
             var err = new List<string>();
 

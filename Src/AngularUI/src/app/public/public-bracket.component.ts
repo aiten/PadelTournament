@@ -13,6 +13,9 @@ const CARD_H = 76;
 const UNIT_H = 100;
 const CONN_W = 60;
 const COL_W  = CARD_W + CONN_W;
+const HEADER_OFFSET = 130;
+
+type ZoomMode = 'normal' | 'fit-height' | 'fit-width';
 
 interface MatchPos { match: Match; top: number; left: number; }
 interface Line { x1: number; y1: number; x2: number; y2: number; }
@@ -77,12 +80,31 @@ function cardTop(ri: number, ni: number): number {
     .team-row.winner { font-weight: 700; color: #16a34a; }
     .team-row.loser  { color: #94a3b8; }
     .team-row.tbd    { color: #cbd5e1; font-style: italic; }
+    .zoom-controls { display: flex; gap: 4px; }
+    .zoom-controls a {
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: .85rem;
+      text-decoration: none;
+      color: #333;
+      cursor: pointer;
+    }
+    .zoom-controls a:hover { background: #f0f0f0; }
+    .zoom-controls a.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
   `],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
       <div class="page-header">
         <h2>Tournament Bracket</h2>
+        @if (!loading() && !error() && positions().length > 0) {
+          <div class="zoom-controls">
+            <a [class.active]="zoomMode() === 'normal'" (click)="setZoomMode('normal')">Normal</a>
+            <a [class.active]="zoomMode() === 'fit-height'" (click)="setZoomMode('fit-height')">Fit Height (Round 1)</a>
+            <a [class.active]="zoomMode() === 'fit-width'" (click)="setZoomMode('fit-width')">Fit Width (All Rounds)</a>
+          </div>
+        }
         <button type="button" class="btn" (click)="goBack()">Back</button>
       </div>
       @if (loading()) {
@@ -143,18 +165,33 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   error   = signal('');
   teamNames = computed(() => new Map(this.teams().map(t => [t.id, t.name])));
 
-  containerWidth = signal(window.innerWidth);
+  containerWidth  = signal(window.innerWidth);
+  containerHeight = signal(window.innerHeight - HEADER_OFFSET);
+  zoomMode = signal<ZoomMode>('normal');
 
   @HostListener('window:resize')
   onResize(): void {
     this.containerWidth.set(window.innerWidth);
+    this.containerHeight.set(window.innerHeight - HEADER_OFFSET);
+  }
+
+  setZoomMode(mode: ZoomMode): void {
+    this.zoomMode.set(mode);
   }
 
   scale = computed(() => {
-    const tw = this.totalWidth();
-    const cw = this.containerWidth();
-    if (tw <= 0 || cw <= 0) return 1;
-    return cw > tw ? cw / tw : 1;
+    const mode = this.zoomMode();
+    if (mode === 'fit-width') {
+      const tw = this.totalWidth();
+      const cw = this.containerWidth();
+      return tw > 0 && cw > 0 ? cw / tw : 1;
+    }
+    if (mode === 'fit-height') {
+      const th = this.totalHeight();
+      const ch = this.containerHeight();
+      return th > 0 && ch > 0 ? ch / th : 1;
+    }
+    return 1;
   });
 
   scaledWidth  = computed(() => Math.round(this.totalWidth()  * this.scale()));
