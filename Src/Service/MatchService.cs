@@ -358,8 +358,9 @@ public class MatchService : IMatchService
         {
             case Format.Padel:
             case Format.Tennis:
-                var errors = CheckResultTennis(match.Tournament.BestOf, match.Tournament.GamesToWinSet, match.Tournament.MinDiff, result, sets);
-                return errors;
+                return CheckResultTennis(match.Tournament.BestOf, match.Tournament.GamesToWinSet, match.Tournament.MinDiff, result, sets);
+            case Format.Soccer:
+                return CheckResultSoccer(result, sets);
             default:
                 throw new NotSupportedException($"Tournament format not supported: {match.Tournament.Format}");
         }
@@ -378,9 +379,9 @@ public class MatchService : IMatchService
         {
             var err = new List<string>();
 
-            int    maxScore     = Math.Max(set.ScoreA, set.ScoreB);
-            int    minScore     = Math.Min(set.ScoreA, set.ScoreB);
-            bool   needTiebreak = false;
+            int  maxScore     = Math.Max(set.ScoreA, set.ScoreB);
+            int  minScore     = Math.Min(set.ScoreA, set.ScoreB);
+            bool needTiebreak = false;
 
             if (Math.Abs(set.ScoreB - set.ScoreA) < minDiff && (minDiff < 2 || maxScore != maxGamesToWinSet))
             {
@@ -440,6 +441,45 @@ public class MatchService : IMatchService
             result == MatchResult.WonB && last.ScoreA > last.ScoreB)
         {
             errors.Add($"Invalid match result. {teamName} did not win the last set.");
+        }
+
+        return errors;
+    }
+
+    private IEnumerable<string> CheckResultSoccer(MatchResult result, IList<SetResultOverview> sets)
+    {
+        var errors = new List<string>();
+
+        string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
+
+        int scoreA = 0;
+        int scoreB = 0;
+
+        errors = sets.SelectMany((set, index) =>
+        {
+            var err = new List<string>();
+
+            if (scoreA > set.ScoreA || scoreB > set.ScoreB)
+            {
+                err.Add($"Set {index + 1}: Goals cannot be revoked!");
+            }
+
+            scoreA = set.ScoreA;
+            scoreB = set.ScoreB;
+
+            if (set.TieBreakPoints is not null)
+            {
+                err.Add($"Set {index + 1}: Soccer has no tiebreak");
+            }
+
+            return err;
+        }).ToList();
+
+        var last     = sets.Last();
+        if (result == MatchResult.WonA && last.ScoreA < last.ScoreB ||
+            result == MatchResult.WonB && last.ScoreA > last.ScoreB)
+        {
+            errors.Add($"Invalid match result. {teamName} did not win.");
         }
 
         return errors;
