@@ -362,6 +362,7 @@ public class MatchService : IMatchService
                     match.Tournament.Format.BestOf ?? 3,
                     match.Tournament.Format.GamesToWinSet ?? 6,
                     match.Tournament.Format.MinMargin ?? 2,
+                    match.Tournament.Format.NoTiebreak,
                     result, sets);
             case PlayingFormat.Soccer:
                 return CheckResultSoccer(result, sets);
@@ -370,10 +371,10 @@ public class MatchService : IMatchService
         }
     }
 
-    private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minMargin, MatchResult result, IList<SetResultOverview> sets)
+    private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minMargin, bool noTiebreak, MatchResult result, IList<SetResultOverview> sets)
     {
         int minWin           = bestOf / 2 + 1; // int div
-        int maxGamesToWinSet = minGamesToWinSet + minMargin - 1;
+        int maxGamesToWinSet = noTiebreak ? int.MaxValue : minGamesToWinSet + minMargin - 1;
         int tiebreakMinMargin  = 2;
 
         string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
@@ -401,7 +402,7 @@ public class MatchService : IMatchService
                 err.Add($"Set {index + 1}: Won games must be less or equal to {maxGamesToWinSet}");
             }
 
-            if (minMargin > 1)
+            if (minMargin > 1 && !noTiebreak)
             {
                 if (maxScore == maxGamesToWinSet && maxScore - minScore > minMargin)
                 {
