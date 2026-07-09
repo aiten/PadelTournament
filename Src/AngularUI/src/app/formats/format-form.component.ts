@@ -26,7 +26,7 @@ import { FormatService } from '../services/format.service';
             }
           </select>
         </div>
-        @if (format().playingFormat === PlayingFormat.Tennis || format().playingFormat === PlayingFormat.Padel) {
+        @if (format().playingFormat === PlayingFormat.Tennis) {
           <div class="form-group">
             <label>Best Of *</label>
             <input type="number" name="bestOf" [(ngModel)]="format().bestOf" required min="1" class="form-control" />

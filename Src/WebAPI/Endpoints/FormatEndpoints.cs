@@ -35,7 +35,6 @@ public static class FormatEndpoints
         return playingFormat switch
         {
             "Tennis" => PlayingFormat.Tennis,
-            "Padel"  => PlayingFormat.Padel,
             "Soccer" => PlayingFormat.Soccer,
             _        => null
         };

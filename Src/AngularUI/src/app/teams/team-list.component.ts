@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed, ChangeDetectionStrategy } from '@a
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { Team } from '../models/team.model';
 import { TeamService } from '../services/team.service';
+import { TournamentService } from '../services/tournament.service';
 
 type SortCol = 'name' | 'seed' | 'startMatchPos' | 'registrationDate' | 'registrationCode';
 
@@ -19,7 +20,7 @@ type SortCol = 'name' | 'seed' | 'startMatchPos' | 'registrationDate' | 'registr
   template: `
     <div class="page">
       <div class="page-header">
-        <h2>Teams</h2>
+        <h2>Teams: {{ tournamentName() }}</h2>
         <div style="display:flex;gap:8px">
           <a [routerLink]="['/tournaments', tournamentId, 'teams', 'new']" class="btn btn-primary">+ Add Team</a>
           <a [routerLink]="['/tournaments', tournamentId, 'teams', 'bulk']" class="btn btn-secondary">Add Teams...</a>
@@ -79,6 +80,7 @@ type SortCol = 'name' | 'seed' | 'startMatchPos' | 'registrationDate' | 'registr
 })
 export class TeamListComponent implements OnInit {
   tournamentId = 0;
+  tournamentName = signal('');
   teams = signal<Team[]>([]);
   loading = signal(false);
   sortCol = signal<SortCol>('name');
@@ -101,10 +103,17 @@ export class TeamListComponent implements OnInit {
     });
   });
 
-  constructor(private service: TeamService, private route: ActivatedRoute) {}
+  constructor(
+    private service: TeamService,
+    private tournamentService: TournamentService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
+    this.tournamentService.getById(this.tournamentId).subscribe({
+      next: tournament => this.tournamentName.set(tournament.description)
+    });
     this.loading.set(true);
     this.service.getAll(this.tournamentId).subscribe({
       next: data => { this.teams.set(data); this.loading.set(false); },

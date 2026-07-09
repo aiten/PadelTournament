@@ -124,12 +124,12 @@ function cardTop(ri: number, ni: number): number {
   template: `
     <div class="page">
       <div class="page-header">
-        <h2>Tournament Bracket</h2>
+        <h2>Tournament: {{ tournamentName() }}</h2>
         @if (!loading() && !scorePrompt() && positions().length > 0) {
           <div class="zoom-controls">
             <a [class.active]="zoomMode() === 'normal'" (click)="setZoomMode('normal')">Normal</a>
-            <a [class.active]="zoomMode() === 'fit-height'" (click)="setZoomMode('fit-height')">Fit Height (Round 1)</a>
-            <a [class.active]="zoomMode() === 'fit-width'" (click)="setZoomMode('fit-width')">Fit Width (All Rounds)</a>
+            <a [class.active]="zoomMode() === 'fit-height'" (click)="setZoomMode('fit-height')">Fit Height</a>
+            <a [class.active]="zoomMode() === 'fit-width'" (click)="setZoomMode('fit-width')">Fit Width</a>
           </div>
         }
         <a [routerLink]="['/tournaments', tournamentId, 'matches']" class="btn">Back to Matches</a>
@@ -223,6 +223,7 @@ function cardTop(ri: number, ni: number): number {
 export class MatchBracketComponent implements OnInit, OnDestroy {
   tournamentId = 0;
   tournamentPin = '';
+  tournamentName = signal('');
   matches = signal<Match[]>([]);
   teams   = signal<Team[]>([]);
   loading = signal(true);
@@ -286,6 +287,7 @@ export class MatchBracketComponent implements OnInit, OnDestroy {
     this.tournamentService.getById(this.tournamentId).subscribe({
       next: tournament => {
         this.tournamentPin = tournament.registrationPin ?? '';
+        this.tournamentName.set(tournament.description);
         this.signalR.joinTournamentGroup(this.tournamentPin);
       }
     });

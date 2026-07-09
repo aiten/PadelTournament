@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Team } from '../models/team.model';
 import { TeamService } from '../services/team.service';
+import { TournamentService } from '../services/tournament.service';
 
 @Component({
   selector: 'app-team-form',
@@ -11,7 +12,7 @@ import { TeamService } from '../services/team.service';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
-      <h2>{{ isNew ? 'Add Team' : 'Edit Team' }}</h2>
+      <h2>{{ isNew ? 'Add Team' : 'Edit Team' }}: {{ tournamentName() }}</h2>
       <form (ngSubmit)="save()" #form="ngForm" class="form">
         <div class="form-group">
           <label>Player 1 *</label>
@@ -58,17 +59,22 @@ import { TeamService } from '../services/team.service';
 export class TeamFormComponent implements OnInit {
   team = signal<Team>({ id: 0, tournamentId: 0, player1: '', player2: null, name: '', seed: null, startMatchPos: null, registrationDate: '', registrationCode: null });
   tournamentId = 0;
+  tournamentName = signal('');
   isNew = true;
   error = signal('');
 
   constructor(
     private service: TeamService,
+    private tournamentService: TournamentService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
+    this.tournamentService.getById(this.tournamentId).subscribe({
+      next: tournament => this.tournamentName.set(tournament.description)
+    });
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
       this.isNew = false;

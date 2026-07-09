@@ -16,7 +16,7 @@ import { toCanvas } from 'qrcode';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
-      <h2>Team QR Code</h2>
+      <h2>Team QR Code: {{ tournamentName() }}</h2>
       @if (loading()) {
         <p class="empty">Loading...</p>
       }
@@ -47,6 +47,7 @@ import { toCanvas } from 'qrcode';
 })
 export class TeamQrComponent implements OnInit {
   tournamentId = 0;
+  tournamentName = signal('');
   team = signal<Team | null>(null);
   loading = signal(false);
   error = signal('');
@@ -81,6 +82,7 @@ export class TeamQrComponent implements OnInit {
         }
         this.tournamentService.getById(this.tournamentId).subscribe({
           next: tournament => {
+            this.tournamentName.set(tournament.description);
             if (!tournament.registrationPin) {
               this.error.set('This tournament has no registration PIN.');
               this.loading.set(false);

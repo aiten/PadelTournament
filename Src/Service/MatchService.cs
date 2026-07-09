@@ -319,11 +319,12 @@ public class MatchService : IMatchService
         }
     }
 
-    private async Task<Match> GetActiveMatchAsync(int matchId)
+    private async Task<Match> GetMatchNoTenantAsync(int matchId)
     {
         var match = await _uow.Matches.GetByIdNoTenantAsync(matchId,
             nameof(Match.NextMatch),
             nameof(Match.Tournament),
+            $"{nameof(Match.Tournament)}.{nameof(Tournament.Format)}",
             nameof(Match.Sets),
             $"{nameof(Match.Sets)}.{nameof(Set.Games)}"
         );
@@ -331,6 +332,13 @@ public class MatchService : IMatchService
         {
             throw new NotFoundException($"Match not found! {matchId}");
         }
+
+        return match;
+    }
+
+    private async Task<Match> GetActiveMatchAsync(int matchId)
+    {
+        var match = await GetMatchNoTenantAsync(matchId);
 
         if (match.Result != null)
         {
@@ -352,11 +360,10 @@ public class MatchService : IMatchService
             return new List<string>();
         }
 
-        var match = await SingleMatchAsync(matchId, $"{nameof(Match.Tournament)}.{nameof(Tournament.Format)}");
+        var match = await GetMatchNoTenantAsync(matchId);
 
         switch (match.Tournament.Format?.PlayingFormat)
         {
-            case PlayingFormat.Padel:
             case PlayingFormat.Tennis:
                 return CheckResultTennis(
                     match.Tournament.Format.BestOf ?? 3,
@@ -373,9 +380,9 @@ public class MatchService : IMatchService
 
     private IEnumerable<string> CheckResultTennis(int bestOf, int minGamesToWinSet, int minMargin, bool noTiebreak, MatchResult result, IList<SetResultOverview> sets)
     {
-        int minWin           = bestOf / 2 + 1; // int div
-        int maxGamesToWinSet = noTiebreak ? int.MaxValue : minGamesToWinSet + minMargin - 1;
-        int tiebreakMinMargin  = 2;
+        int minWin            = bestOf / 2 + 1; // int div
+        int maxGamesToWinSet  = noTiebreak ? int.MaxValue : minGamesToWinSet + minMargin - 1;
+        int tiebreakMinMargin = 2;
 
         string teamName = result == MatchResult.WonA ? "Team A" : "Team B";
 
@@ -477,7 +484,7 @@ public class MatchService : IMatchService
             return err;
         }).ToList();
 
-        var last     = sets.Last();
+        var last = sets.Last();
         if (result == MatchResult.WonA && last.ScoreA < last.ScoreB ||
             result == MatchResult.WonB && last.ScoreA > last.ScoreB)
         {

@@ -23,11 +23,6 @@ import { Team } from '../models/team.model';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page">
-      <div class="page-header">
-        <h2>Your Team</h2>
-        <a routerLink="/public" class="btn">Back</a>
-      </div>
-
       @if (tournament()) {
         <div class="info-bar">
           <div class="info-item">
@@ -56,6 +51,7 @@ import { Team } from '../models/team.model';
       <div class="form-actions" style="gap:.5rem;display:flex;flex-wrap:wrap;">
         <button type="button" class="btn btn-primary" (click)="viewMatches()">View My Matches</button>
         <button type="button" class="btn" (click)="viewBracket()">View Bracket</button>
+        <a routerLink="/public" class="btn" style="margin-left:auto;">Back</a>
       </div>
     </div>
   `

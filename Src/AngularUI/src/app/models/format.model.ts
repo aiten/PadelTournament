@@ -1,6 +1,5 @@
 export enum PlayingFormat {
   Tennis = 'Tennis',
-  Padel = 'Padel',
   Soccer = 'Soccer'
 }
 

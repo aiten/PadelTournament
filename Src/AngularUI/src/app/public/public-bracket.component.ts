@@ -97,12 +97,12 @@ function cardTop(ri: number, ni: number): number {
   template: `
     <div class="page">
       <div class="page-header">
-        <h2>Tournament Bracket</h2>
+        <h2>{{ tournamentName() }}</h2>
         @if (!loading() && !error() && positions().length > 0) {
           <div class="zoom-controls">
             <a [class.active]="zoomMode() === 'normal'" (click)="setZoomMode('normal')">Normal</a>
-            <a [class.active]="zoomMode() === 'fit-height'" (click)="setZoomMode('fit-height')">Fit Height (Round 1)</a>
-            <a [class.active]="zoomMode() === 'fit-width'" (click)="setZoomMode('fit-width')">Fit Width (All Rounds)</a>
+            <a [class.active]="zoomMode() === 'fit-height'" (click)="setZoomMode('fit-height')">Fit Height</a>
+            <a [class.active]="zoomMode() === 'fit-width'" (click)="setZoomMode('fit-width')">Fit Width</a>
           </div>
         }
         <button type="button" class="btn" (click)="goBack()">Back</button>
@@ -163,6 +163,7 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
   teams   = signal<Team[]>([]);
   loading = signal(true);
   error   = signal('');
+  tournamentName = signal('');
   teamNames = computed(() => new Map(this.teams().map(t => [t.id, t.name])));
 
   containerWidth  = signal(window.innerWidth);
@@ -223,6 +224,10 @@ export class PublicBracketComponent implements OnInit, OnDestroy {
     if (this.mainEl) this.renderer.addClass(this.mainEl, 'bracket-fullwidth');
 
     this.pin = this.route.snapshot.paramMap.get('pin')!;
+
+    this.publicService.getTournament(this.pin).subscribe({
+      next: tournament => this.tournamentName.set(tournament.description)
+    });
 
     this.signalR.joinTournamentGroup(this.pin);
     this.signalRSub = new Subscription();

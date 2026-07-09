@@ -30,7 +30,7 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
   template: `
     <div class="page">
       <div class="page-header">
-        <h2>Matches</h2>
+        <h2>Matches: {{ tournamentName() }}</h2>
         <a [routerLink]="['/tournaments', tournamentId, 'bracket']" class="btn">Bracket</a>
         @if (matches().length > 0) {
           <button type="button" class="btn btn-danger" (click)="confirmRevertSchedule()">Delete Matches</button>
@@ -126,6 +126,7 @@ type SortCol = 'round' | 'no' | 'teamA' | 'teamB' | 'start' | 'result';
 export class MatchListComponent implements OnInit, OnDestroy {
   tournamentId = 0;
   tournamentPin = '';
+  tournamentName = signal('');
   matches = signal<Match[]>([]);
   teams = signal<Team[]>([]);
   loading = signal(false);
@@ -174,6 +175,7 @@ export class MatchListComponent implements OnInit, OnDestroy {
     this.tournamentService.getById(this.tournamentId).subscribe({
       next: tournament => {
         this.tournamentPin = tournament.registrationPin ?? '';
+        this.tournamentName.set(tournament.description);
         this.signalR.joinTournamentGroup(this.tournamentPin);
       }
     });

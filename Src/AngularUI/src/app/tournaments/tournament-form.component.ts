@@ -48,7 +48,7 @@ import { FormatService } from '../services/format.service';
             <label>Playing Format</label>
             <input [value]="sf.playingFormat" class="form-control" disabled />
           </div>
-          @if (sf.playingFormat === PlayingFormat.Tennis || sf.playingFormat === PlayingFormat.Padel) {
+          @if (sf.playingFormat === PlayingFormat.Tennis) {
             <div class="form-group">
               <label>Best Of</label>
               <input [value]="sf.bestOf" class="form-control" disabled />

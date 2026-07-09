@@ -2,6 +2,7 @@ import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/cor
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TeamService } from '../services/team.service';
+import { TournamentService } from '../services/tournament.service';
 import { TournamentRegistrationResult } from '../models/registration.model';
 
 @Component({
@@ -12,7 +13,7 @@ import { TournamentRegistrationResult } from '../models/registration.model';
   template: `
     <div class="page">
       <div class="page-header">
-        <h2>Add Teams</h2>
+        <h2>Add Teams: {{ tournamentName() }}</h2>
         <a [routerLink]="['/tournaments', tournamentId, 'teams']" class="btn">Back</a>
       </div>
       @if (!registered()) {
@@ -57,16 +58,24 @@ import { TournamentRegistrationResult } from '../models/registration.model';
 })
 export class TeamBulkAddComponent implements OnInit {
   tournamentId = 0;
+  tournamentName = signal('');
   teamsText = '';
   submitting = signal(false);
   registered = signal(false);
   results = signal<TournamentRegistrationResult[]>([]);
   error = signal('');
 
-  constructor(private service: TeamService, private route: ActivatedRoute) {}
+  constructor(
+    private service: TeamService,
+    private tournamentService: TournamentService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
     this.tournamentId = +this.route.snapshot.paramMap.get('tournamentId')!;
+    this.tournamentService.getById(this.tournamentId).subscribe({
+      next: tournament => this.tournamentName.set(tournament.description)
+    });
   }
 
   submit(): void {

@@ -39,7 +39,7 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
   template: `
     <div class="page">
       <div class="page-header">
-        <h2>My Matches</h2>
+        <h2>{{ tournament()?.description }}</h2>
         <a [routerLink]="['/public', pin, code]" class="btn">Back</a>
       </div>
 
@@ -51,7 +51,6 @@ import { MatchScoreInputComponent } from '../shared/match-score-input.component'
         <div class="team-header">
           <div class="team-name">{{ team()?.name }}</div>
           <div class="team-sub">
-            @if (tournament()) { {{ tournament()!.description }} · }
             @if (team()?.seed) { Seed: {{ team()?.seed }} · }
           </div>
         </div>
